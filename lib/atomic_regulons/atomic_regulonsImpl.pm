@@ -1,0 +1,365 @@
+package atomic_regulons::atomic_regulonsImpl;
+use Bio::KBase::Exceptions;
+use atomic_regulons::GTO;
+#use atomic_regulons::GTO; # use require
+# Use Semantic Versioning (2.0.0-rc.1)
+# http://semver.org
+our $VERSION = "0.1.0";
+
+=head1 NAME
+
+atomic_regulons
+
+=head1 DESCRIPTION
+
+A KBase module: atomic_regulons
+This sample module contains one small method - filter_contigs.
+
+=cut
+
+#BEGIN_HEADER
+#use lib "/.";
+use Bio::KBase::AuthToken;
+use Bio::KBase::workspace::Client;
+use Config::IniFiles;
+use Data::Dumper;
+
+########
+
+# perl for_ross.pl  GTO_SS Emat PC
+
+use strict;
+use ExpressionDir;
+use File::Copy::Recursive;
+########
+
+#END_HEADER
+
+
+sub new
+{
+    my($class, @args) = @_;
+    my $self = {
+    };
+    bless $self, $class;
+    #BEGIN_CONSTRUCTOR
+
+    my $config_file = $ENV{ KB_DEPLOYMENT_CONFIG };
+    my $cfg = Config::IniFiles->new(-file=>$config_file);
+    my $wsInstance = $cfg->val('atomic_regulons','workspace-url');
+    die "no workspace-url defined" unless $wsInstance;
+
+    $self->{'workspace-url'} = $wsInstance;
+
+    #END_CONSTRUCTOR
+
+    if ($self->can('_init_instance'))
+    {
+	$self->_init_instance();
+    }
+    return $self;
+}
+
+=head1 METHODS
+
+
+
+=head2 compute_atomic_regulons
+
+  $return = $obj->compute_atomic_regulons($workspace_name, $expression_matrix_ref, $genome_ref)
+
+=over 4
+
+=item Parameter and return types
+
+=begin html
+
+<pre>
+$workspace_name is an atomic_regulons.workspace_name
+$expression_matrix_ref is an atomic_regulons.expression_matrix_ref
+$genome_ref is an atomic_regulons.genome_ref
+$return is an atomic_regulons.AtomicRegulonSet
+workspace_name is a string
+expression_matrix_ref is a string
+genome_ref is a string
+AtomicRegulonSet is a reference to a hash where the following keys are defined:
+	expression_matrix_ref has a value which is a string
+	genome_ref has a value which is a string
+
+</pre>
+
+=end html
+
+=begin text
+
+$workspace_name is an atomic_regulons.workspace_name
+$expression_matrix_ref is an atomic_regulons.expression_matrix_ref
+$genome_ref is an atomic_regulons.genome_ref
+$return is an atomic_regulons.AtomicRegulonSet
+workspace_name is a string
+expression_matrix_ref is a string
+genome_ref is a string
+AtomicRegulonSet is a reference to a hash where the following keys are defined:
+	expression_matrix_ref has a value which is a string
+	genome_ref has a value which is a string
+
+
+=end text
+
+
+
+=item Description
+
+
+
+=back
+
+=cut
+
+sub compute_atomic_regulons
+{
+    my $self = shift;
+    my($workspace_name, $expression_matrix_ref, $genome_ref) = @_;
+
+    my @_bad_arguments;
+    (!ref($workspace_name)) or push(@_bad_arguments, "Invalid type for argument \"workspace_name\" (value was \"$workspace_name\")");
+    (!ref($expression_matrix_ref)) or push(@_bad_arguments, "Invalid type for argument \"expression_matrix_ref\" (value was \"$expression_matrix_ref\")");
+    (!ref($genome_ref)) or push(@_bad_arguments, "Invalid type for argument \"genome_ref\" (value was \"$genome_ref\")");
+    if (@_bad_arguments) {
+	my $msg = "Invalid arguments passed to compute_atomic_regulons:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
+							       method_name => 'compute_atomic_regulons');
+    }
+
+    my $ctx = $atomic_regulons::atomic_regulonsServer::CallContext;
+    my($return);
+    #BEGIN compute_atomic_regulons
+    my $token=$ctx->token;
+    my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
+    my $wsid = "5935";
+    my $gto=$wshandle->get_objects([{wsid=>$wsid, name=>$genome_ref}]);
+    my $expdata=$wshandle->get_objects([{wsid=>$wsid,name=>$expression_matrix_ref}]);
+    #my $em=$wshandle->get_objects([{workspace=>$workspace_name,name=>$expression_matrix_ref}]);
+    #my $gto = GenomeTypeObject->create_from_file($gtoFile);
+    my $expDir = "/kb/module/work/tmp/arwork";
+
+    print join ("\n",@INC,"");
+
+    #print &Dumper ($em);
+    #die;
+
+    my $genomeID = $gto->[0]->{source_id};
+    File::Copy::Recursive::pathmk("$expDir/$genomeID");
+    open(my $oh, ">$expDir/GENOME_ID") || die "Could not write genome ID: $!";
+    print $oh $genomeID;
+    close $oh;
+    #File::Copy::Recursive::pathmk("$expDir/$genomeID");
+    File::Copy::Recursive::fcopy($expdata, "$expDir/rma_normalized.tab");
+    #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
+    print "its here now\n";
+    atomic_regulons::GTO::write_seed_dir ($gto->[0],$expDir);
+    # Write the subsystems.
+    File::Copy::Recursive::pathmk("$expDir/$genomeID/Subsystems");
+    open(my $bh, ">$expDir/$genomeID/Subsystems/bindings") || die "Could not write subsystem bindings: $!";
+    open(my $sh, ">$expDir/$genomeID/Subsystems/subsystems") || die "Could not write subsystem listing: $!";
+    my $subH = $gto->{subsystems};
+    for my $sub (keys %$subH) {
+	my $subRow = $subH->{$sub};
+	my ($variant, $cellsH) = @$subRow;
+	print $sh "$sub\t$variant\n";
+	for my $role (keys %$cellsH) {
+		my $fidsL = $cellsH->{$role};
+		for my $fid (@$fidsL) {
+			print $bh "$sub\t$role\t$fid\n";
+		}
+	}
+    }
+    close $bh;
+    close $sh;
+    my $e = ExpressionDir->new($expDir);
+    $e->compute_atomic_regulons();
+
+
+
+
+
+    #END compute_atomic_regulons
+    my @_bad_returns;
+    (ref($return) eq 'HASH') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
+    if (@_bad_returns) {
+	my $msg = "Invalid returns passed to compute_atomic_regulons:\n" . join("", map { "\t$_\n" } @_bad_returns);
+	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
+							       method_name => 'compute_atomic_regulons');
+    }
+    return($return);
+}
+
+
+
+
+=head2 version
+
+  $return = $obj->version()
+
+=over 4
+
+=item Parameter and return types
+
+=begin html
+
+<pre>
+$return is a string
+</pre>
+
+=end html
+
+=begin text
+
+$return is a string
+
+=end text
+
+=item Description
+
+Return the module version. This is a Semantic Versioning number.
+
+=back
+
+=cut
+
+sub version {
+    return $VERSION;
+}
+
+=head1 TYPES
+
+
+
+=head2 workspace_name
+
+=over 4
+
+
+
+=item Description
+
+A string representing the workspace name
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
+=head2 expression_matrix_ref
+
+=over 4
+
+
+
+=item Description
+
+String represent the Expression Matrix
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
+=head2 genome_ref
+
+=over 4
+
+
+
+=item Description
+
+A string for the genome
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
+=head2 AtomicRegulonSet
+
+=over 4
+
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a reference to a hash where the following keys are defined:
+expression_matrix_ref has a value which is a string
+genome_ref has a value which is a string
+
+</pre>
+
+=end html
+
+=begin text
+
+a reference to a hash where the following keys are defined:
+expression_matrix_ref has a value which is a string
+genome_ref has a value which is a string
+
+
+=end text
+
+=back
+
+
+
+=cut
+
+1;

@@ -1,0 +1,166 @@
+#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+use strict;
+use Carp;
+use Data::Dumper;
+use Statistics::Descriptive;
+use ExpressionDir;
+
+my($expr_dir);
+my $usage = "usage: make_coreg_conjectures_based_on_subsys expr_dir [subsystems-dir]";
+(
+ ($expr_dir   = shift @ARGV)
+)
+    || die $usage;
+
+my %sets;
+if ((@ARGV > 0) && (-s "$ARGV[0]/bindings"))
+{
+    foreach $_ (`cat $ARGV[0]/bindings`)
+    {
+	chop;
+	my($ss,$role,$peg) = split(/\t/,$_);
+	push(@{$sets{$ss}},$peg);
+    }
+}
+
+my $exprO = ExpressionDir->new($expr_dir);
+my $rawF = $exprO->expr_dir . "/rma_normalized.tab";
+
+my %bad_subsystems;
+
+#my $sapO    = SAPserver->new;
+
+my $corrH = &get_corr($rawF);
+
+#my $genomeH = $sapO->genomes_to_subsystems( -ids => [$genome] );
+#my @subs = map { ($_->[1] =~ /^\*?(0|-1)$/) ? () : $_->[0] } @{$genomeH->{$genome}};
+#@subs = grep { ! $bad_subsystems{$_} } @subs;
+ 
+#my $subH = $sapO->ids_in_subsystems( -subsystems => \@subs,
+#				     -genome     => $genome);
+my $subH = $exprO->ids_in_subsystems();
+my @subs = sort (%sets ? keys(%sets) : keys %$subH);
+
+my %bad;
+
+foreach my $sub (@subs)
+{
+    my %pegs;
+    my @pegs;
+    if (%sets)
+    {
+	@pegs = sort { &SeedUtils::by_fig_id($a,$b) }@{$sets{$sub}};
+    }
+    else
+    {
+	my $sub_entry = $subH->{$sub};
+	@pegs = ();
+	foreach my $role (keys(%$sub_entry))
+	{
+	    my $pegs = $sub_entry->{$role};
+	    foreach $_ (@$pegs) { $pegs{$_} = 1 }
+	}
+	@pegs = sort { &SeedUtils::by_fig_id($a,$b) } keys(%pegs);
+    }
+    
+    my @sets = grep { @$_ > 1 } split_on_pc(\@pegs,$corrH);
+
+    if (@sets > ((@pegs + 2) / 3))
+    {
+	$bad{$sub} = 1;
+#	print STDERR &Dumper([$sub,\@sets]);
+    }
+    else
+    {
+	foreach my $set (@sets)
+	{
+	    if (@$set > 1)
+	    {
+		print join(",",@$set),"\tInSubsystem:$sub\n";
+	    }
+	}
+    }
+}
+foreach $_ (keys(%bad))
+{
+    print STDERR "bad subsystem\t$_\n";
+}
+
+sub split_on_pc {
+    my($pegs,$corrH) = @_;
+
+    my @sets = ();
+    my %used;
+    my $i;
+    for ($i=0; ($i < (@$pegs - 1)); $i++)
+    {
+	if (! $used{$pegs->[$i]})
+	{
+	    my @poss = ($pegs->[$i]);
+	    my $j;
+	    for ($j=$i+1; ($j < @$pegs); $j++)
+	    {
+		if (&corr($pegs->[$j],\@poss,$corrH))
+		{
+		    push(@poss,$pegs->[$j]);
+		    $used{$pegs->[$j]} = 1;
+		}
+	    }
+	    push(@sets,\@poss);
+	}
+    }
+    return @sets;
+}
+
+sub get_corr {
+    my($rawFF) = @_;
+
+    my %gene_to_values;
+    open(RAW,"<$rawF") || die "could not open $rawF";
+    while (<RAW>)
+    {
+	chomp;
+	my ($gene_id, @gxp_values) = split("\t");
+	$gene_to_values{$gene_id} = \@gxp_values;
+    }
+    close(RAW);
+    return \%gene_to_values;
+}
+
+sub compute_pc
+{
+    my ($gene_ids, $gxp_hash) = @_;
+    my %values = ();
+
+    for (my $i = 0; $i < @$gene_ids-1; $i++)
+    {
+	my $stat = Statistics::Descriptive::Full->new();
+	$stat->add_data(@{$gxp_hash->{$gene_ids->[$i]}});
+
+	for (my $j = $i+1; $j < @$gene_ids; $j++)
+	{
+	    my ($q, $m, $r, $err) = $stat->least_squares_fit(@{$gxp_hash->{$gene_ids->[$j]}});
+	    $values{$gene_ids->[$i]}->{$gene_ids->[$j]} = $r;
+	    $values{$gene_ids->[$j]}->{$gene_ids->[$i]} = $r;
+	}
+    }
+    
+    return \%values;
+}
+
+sub corr {
+    my($peg1,$cluster,$corrH) = @_;
+
+    my $hash = &compute_pc([$peg1,@$cluster],$corrH);
+
+#   print STDERR &Dumper($peg1,$cluster);
+    
+    my $sum = 0;
+    foreach my $peg2 (@$cluster)
+    {
+	my $v = $hash->{$peg1}->{$peg2};
+	if ((! defined($v)) || ($v < 0.4)) { return 0 }
+	$sum += $v;
+    }
+    return (($sum / @$cluster) >= 0.7);
+}

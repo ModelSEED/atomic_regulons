@@ -1,0 +1,226 @@
+#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+
+
+
+use Data::Dumper;
+use Carp;
+use Statistics::Descriptive;
+use ExpressionDir;
+
+my($expr_dir);
+my $usage = "usage: call_coregulated_clusters_on_chromosome ExpressionDir";
+(
+ ($expr_dir    = shift @ARGV)
+)
+    || die $usage;
+
+my $exprO = ExpressionDir->new($expr_dir);
+
+my $rawF = $exprO->expr_dir . "/rma_normalized.tab";
+
+#my $sapO    = SAPserver->new;
+#my $genomeH = $sapO->all_features( -ids => [$genome], -type => 'peg' );
+#my $pegs    = $genomeH->{$genome};
+#$pegs || die "could not get pegs for genome $genome";
+
+#my $pegH    = $sapO->fid_locations( -ids => $pegs, -boundaries => 1 );
+
+my $pegs = [$exprO->all_features('peg')];
+#print STDERR &Dumper($pegs) . "\n\n";
+my $pegH = $exprO->fid_locations($pegs);
+#print STDERR &Dumper($pegH) . "\n\n";
+my $corrH = &get_corr($rawF);
+my @pegs_with_loc = sort { ($a->[1]->[0] cmp $b->[1]->[0]) or
+			   (($a->[1]->[1]+$a->[1]->[2]) <=> ($b->[1]->[1]+$b->[1]->[2]))
+                         }
+                    map  { $pegH->{$_} =~ /^\d+\.\d+:(\S+)_(\d+)([\+\-])(\d+)/; 
+		           defined($1) || die $pegH->{$_};
+		           [$_,[$1,$2,($3 eq '+') ? ($2+($4-1)) : ($2 -($4-1))]] }
+                    keys(%$pegH);      
+#print STDERR &Dumper(\@pegs_with_loc);
+my $clusters = &possible_clusters(\@pegs_with_loc,$corrH);
+foreach my $cluster (@$clusters)
+{
+    if (@$cluster > 1)
+    {
+	my @pegs = sort { &SeedUtils::by_fig_id($a,$b) } @$cluster;
+	print join(",",@pegs),"\tClusterOnChromosome:$pegs[0],$pegs[$#pegs]\n";
+    }
+}
+
+sub get_corr {
+    my($rawF) = @_;
+
+    my %gene_to_values;
+    open(RAW,"<$rawF") || die "could not open $rawF";
+    while (<RAW>)
+    {
+	chomp;
+	my ($gene_id, @gxp_values) = split("\t");
+	$gene_to_values{$gene_id} = \@gxp_values;
+    }
+    close(RAW);
+    return \%gene_to_values;
+}
+
+sub compute_pc
+{
+    my ($gene_ids, $gxp_hash) = @_;
+    my %values = ();
+
+    for (my $i = 0; $i < @$gene_ids-1; $i++)
+    {
+	my $stat = Statistics::Descriptive::Full->new();
+	$stat->add_data(@{$gxp_hash->{$gene_ids->[$i]}});
+
+	for (my $j = $i+1; $j < @$gene_ids; $j++)
+	{
+	    my ($q, $m, $r, $err) = $stat->least_squares_fit(@{$gxp_hash->{$gene_ids->[$j]}});
+	    $values{$gene_ids->[$i]}->{$gene_ids->[$j]} = $r;
+	    $values{$gene_ids->[$j]}->{$gene_ids->[$i]} = $r;
+	}
+    }
+    
+    return \%values;
+}
+
+sub corrDB_similarity {
+    my($peg1,$peg2,$corrH) = @_;
+ 
+    my $v = &compute_pc([$peg1,$peg2],$corrH);
+    return defined($_ = $v->{$peg1}->{$peg2}) ? $_ : 0;
+}
+
+sub corrDB_distance {
+    my($peg1,$peg2,$corrH) = @_;
+
+    my $sim = &corrDB_similarity($peg1,$peg2,$corrH);
+    return 1-$sim;
+}
+
+sub possible_clusters {
+    my($pegs_with_locs,$corrH) = @_;
+
+    my $clusters = [];
+    &gather_from_strand($pegs_with_locs,$corrH,$clusters);
+    my $flipped = &flip($pegs_with_locs);
+    my @pegs_with_locR = sort { ($a->[1]->[0] cmp $b->[1]->[0]) or
+				    (($a->[1]->[1]+$a->[1]->[2]) <=> ($b->[1]->[1]+$b->[1]->[2]))
+                              }
+                         @$flipped;
+    &gather_from_strand(\@pegs_with_locR,$corrH,$clusters);
+	print STDERR scalar(@$clusters) . " clusters found.\n";
+    return $clusters;
+}
+
+sub gather_from_strand {
+    my($pegs_with_locs,$corrH,$clusters) = @_;
+
+    my $max = -1;
+    my $i;
+    while (($i = &next_to_try($max,$pegs_with_locs)) < (@$pegs_with_locs - 1))
+    {
+#	print STDERR "start grouping ",&Dumper($pegs_with_locs->[$i]);
+	my $peg = $pegs_with_locs->[$i]->[0];
+	my $cluster = [$peg];
+	$max = $i;
+	my $j;
+	for ($j=$i+1; 
+	     ($j < @$pegs_with_locs) && 
+	     &ok_in_runF($pegs_with_locs->[$j-1],$pegs_with_locs->[$j],$corrH,$cluster); 
+	     $j++)
+	{
+#	    print STDERR "adding ",&Dumper($pegs_with_locs->[$j]);
+	    push(@$cluster,$pegs_with_locs->[$j]->[0]);
+	    $max = $j;
+	}
+#	print STDERR "before going left ",&Dumper($cluster);
+	if ((($i-1) >= 0) && 
+	    (&corr($pegs_with_locs->[$i-1]->[0],$cluster,$corrH) >= 0.4) &&
+	    ($pegs_with_locs->[$i-1]->[1]->[0] eq $pegs_with_locs->[$i]->[1]->[0]) &&
+	    ($pegs_with_locs->[$i-1]->[1]->[1] > $pegs_with_locs->[$i-1]->[1]->[2]))
+	{
+#	    print STDERR "going left with ",&Dumper($pegs_with_locs->[$i-1]);
+	    push(@$cluster,$pegs_with_locs->[$i-1]->[0]);
+	    for ($j=$i-2; 
+	         ($j >= 0) && &ok_in_runB($pegs_with_locs->[$j+1],$pegs_with_locs->[$j],$corrH,$cluster); 
+		 $j--)
+	    {
+#		print STDERR "adding $pegs_with_locs->[$j]->[0]\n";
+		push(@$cluster,$pegs_with_locs->[$j]->[0]);
+	    }
+	}
+#	print STDERR "final cluster ",&Dumper($cluster); 
+	if (@$cluster > 1) 
+	{ 
+	    push(@$clusters,$cluster);
+#	    print STDERR "keeping ",join(",",@$cluster),"\n";
+	}
+    }
+}
+
+sub ok_in_runB {
+    my($x,$y,$corrH,$cluster) = @_;
+
+    my $loc1 = $x->[1];
+    my($c1,$b1,$e1) = @$loc1;
+    my $loc2 = $y->[1];
+    my($c2,$b2,$e2) = @$loc2;
+    if ($c1 ne $c2) { return 0 }
+    if ($b2 < $e2)  { return 0 }
+    if (! &corr($y->[0],$cluster,$corrH)) { return 0 }
+    return (abs($e1-$b2) < 200);
+}
+
+sub ok_in_runF {
+    my($x,$y,$corrH,$cluster) = @_;
+
+    my $loc1 = $x->[1];
+    my($c1,$b1,$e1) = @$loc1;
+    my $loc2 = $y->[1];
+    my($c2,$b2,$e2) = @$loc2;
+    if ($c1 ne $c2) { return 0 }
+    if ($b2 > $e2)  { return 0 }
+    if (! &corr($y->[0],$cluster,$corrH)) { return 0 }
+    return (abs($b2-$e1) < 200);
+}
+
+sub corr {
+    my($peg1,$cluster,$corrH) = @_;
+
+    my $hash = &compute_pc([$peg1,@$cluster],$corrH);
+
+#   print STDERR &Dumper($peg1,$cluster);
+    
+    my $sum = 0;
+    foreach my $peg2 (@$cluster)
+    {
+	my $v = $hash->{$peg1}->{$peg2};
+	if ((! defined($v)) || ($v < 0.4)) { return 0 }
+	$sum += $v;
+    }
+    return (($sum / @$cluster) >= 0.6);
+}
+
+sub next_to_try {
+    my($max,$pegs_with_locs) = @_;
+    my $i;
+    for ($i=$max+1; ($i < @$pegs_with_locs) && 
+	          ($pegs_with_locs->[$i]->[1]->[1] > $pegs_with_locs->[$i]->[1]->[2]);
+	 $i++) {}
+    return $i;
+}
+
+sub flip {
+    my($pegs_with_locs) = @_;
+
+    my $flipped = [];
+    foreach my $x (@$pegs_with_locs)
+    {
+	my($peg,$loc) = @$x;
+	my($contig,$beg,$end) = @$loc;
+	my $loc1 = [$contig,100000000-$beg,100000000-$end];
+	push(@$flipped,[$peg,$loc1]);
+    }
+    return $flipped;
+}

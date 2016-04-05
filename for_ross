@@ -1,0 +1,46 @@
+#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+
+use ExpressionDir;
+
+# perl for_ross.pl  GTO_SS Emat PC 
+use Data::Dumper;
+use strict;
+use ExpressionDir;
+use File::Copy::Recursive;
+
+@ARGV == 4 or die "Usage: $0 gto expdata expr-dir cutoff\n";
+
+my ($gtoFile, $expdata, $expDir, $cutoff) = @ARGV;
+
+print "processing process_one_exp_dir file in our work directory $expDir\n";
+
+my $gto = GenomeTypeObject->create_from_file($gtoFile);
+my $genomeID = $gto->{source_id};
+open(my $oh, ">$expDir/GENOME_ID") || die "Could not write genome ID: $!";
+print $oh $genomeID;
+close $oh;
+File::Copy::Recursive::pathmk("$expDir/$genomeID");
+File::Copy::Recursive::fcopy($expdata, "$expDir/rma_normalized.tab");
+$gto->write_seed_dir("$expDir/$genomeID");
+# Write the subsystems.
+File::Copy::Recursive::pathmk("$expDir/$genomeID/Subsystems");
+open(my $bh, ">$expDir/$genomeID/Subsystems/bindings") || die "Could not write subsystem bindings: $!";
+open(my $sh, ">$expDir/$genomeID/Subsystems/subsystems") || die "Could not write subsystem listing: $!";
+my $subH = $gto->{subsystems};
+for my $sub (keys %$subH) {
+	my $subRow = $subH->{$sub};
+	my ($variant, $cellsH) = @$subRow;
+	print $sh "$sub\t$variant\n";
+	for my $role (keys %$cellsH) {
+		my $fidsL = $cellsH->{$role};
+		for my $fid (@$fidsL) {
+			print $bh "$sub\t$role\t$fid\n";
+		}
+	}
+}
+close $bh;
+close $sh;
+my $e = ExpressionDir->new($expDir);
+
+
+$e->compute_atomic_regulons();

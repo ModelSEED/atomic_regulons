@@ -1,0 +1,289 @@
+#!/usr/bin/env Rscript
+args = commandArgs(TRUE);
+if (length(args) != 3) { print("usage:  Rscript Pipeline.R on_genes_file gene_sets_file output_dir"); q() }
+on_genes_file = args[1];
+gene_sets_file = args[2];
+output_dir = args[3];
+
+## Read in gene expression data ##
+## This file is the output of 'exprs' from Bioconductor's RMA procedure
+## Header line contains experiment names
+## row name is gene id, rest of the columns are normalized expression values per experiment
+all_geneexp=as.matrix(read.table(paste(output_dir, "rma_normalized.tab", sep="/"),header=TRUE));
+num_genes = dim(all_geneexp)[1];
+num_experiments = dim(all_geneexp)[2];
+
+## gene_sets_files contains the gene set information ##
+## Each line is a comma separated value containing gene ids corresponding to the row names of the raw data ##
+## Need to convert these to row numbers in the raw data
+input_genesets = readLines(gene_sets_file);
+input_genesets = strsplit(input_genesets, ",");
+split_genesets = list();
+
+for (i in 1:length(input_genesets))
+{
+	input_geneset = input_genesets[[i]];
+	split_geneset = c();
+	for (j in 1:length(input_geneset))
+	{
+		# check if the peg is in the raw_data
+		row_num = which(rownames(all_geneexp)==input_geneset[j]);
+		
+		if (length(row_num) > 0) {
+			split_geneset = cbind(split_geneset, row_num);
+		}
+		else {
+			print(c("Couldn't find row for", input_geneset[j]), quote=FALSE);
+		}
+	}
+	
+	if (length(split_geneset) > 1) {
+		split_genesets[[length(split_genesets)+1]] = split_geneset;
+	}
+}
+
+print("Starting New Algorithm");
+
+# Read genes that are the standard for being "on"
+on_genes = readLines(on_genes_file);
+# get gxp values for the on genes
+on_values = matrix(0,nrow=length(on_genes),ncol=num_experiments);
+
+for (i in 1:length(on_genes)) {
+	on_values[i,] = all_geneexp[which(rownames(all_geneexp)==on_genes[i]),];
+	i = i + 1;
+}
+
+cutoffs=matrix(0,nrow=num_experiments,ncol=2);
+for (i in 1:num_experiments) 
+{
+	# "on" cutoff
+	cutoffs[i,2]=quantile(on_values[,i],probs=.1);
+	
+	# "off" cutoff
+	cutoffs[i,1] = quantile(all_geneexp[which(all_geneexp[,i]<cutoffs[i,2]),i],probs=.8);
+}
+
+diff_25 = quantile(cutoffs[,2]-cutoffs[,1],probs=.25);
+
+for (i in 1:num_experiments)
+{
+	if ((cutoffs[i,2]-cutoffs[i,1])<diff_25) 
+	{
+		cutoffs[i,1]=cutoffs[i,2]-diff_25;
+	}
+}
+
+cutoff_calls=matrix(0,nrow=num_genes,ncol=num_experiments);
+
+for (i in 1:num_genes) 
+{
+	for (j in 1:num_experiments) 
+	{
+		if (all_geneexp[i,j] < cutoffs[j,1]) 
+		{
+			cutoff_calls[i,j] = all_geneexp[i,j]-cutoffs[j,1]; 
+		}
+		else if (all_geneexp[i,j] > cutoffs[j,2]) 
+		{ 
+			cutoff_calls[i,j] = all_geneexp[i,j]-cutoffs[j,2]; 
+		}
+	}
+}
+
+final_table = matrix(0,nrow=6,ncol=2);
+
+print("Assessing consistency of initial cutoffs");
+
+table2=matrix(0,nrow=length(split_genesets),ncol=num_experiments);
+exptcalls = matrix(0,nrow=(length(split_genesets)*num_experiments), ncol=1);
+counter = 1;
+
+for (i in 1:length(split_genesets))
+{
+	geneset = split_genesets[[i]];
+	geneset_calls = matrix(0,nrow=length(geneset),ncol=num_experiments);
+	j=1;
+	
+	for (k in geneset) 
+	{
+		geneset_calls[j,] = cutoff_calls[k,];
+		j=j+1;
+	}
+	
+	for (j in 1:num_experiments) 
+	{
+		atleastoneon=sum(geneset_calls[,j] > 0);
+		atleastonegray=sum(geneset_calls[,j]==0);
+		atleastoneoff=sum(geneset_calls[,j] < 0);
+
+		##1 means all genes in set are on for this experiment##
+		if (atleastoneon>=1 && atleastoneoff==0 && atleastonegray==0) {exptcalls[counter]=1;}
+		##2 means all genes in set are off for this experiment##
+		else if (atleastoneon==0 && atleastoneoff>=1 && atleastonegray==0) {exptcalls[counter]=2;}
+		##3 means all genes in set are either off or gray for this experiment##
+		else if (atleastoneon==0 && atleastoneoff>=1 && atleastonegray>=1) {exptcalls[counter]=3;}
+		##4 means all genes in set are either on or gray for this experiment##
+		else if (atleastoneon>=1 && atleastoneoff==0 && atleastonegray>=1) {exptcalls[counter]=4;}
+		##5 means at least one gene in set is off and at least one gene is on for this experiment##
+		else if (atleastoneon>=1 && atleastoneoff>=1)
+		{
+			exptcalls[counter]=5;
+		}
+		##6 means all genes in set are gray for this experiment##
+		else if (atleastoneon==0 && atleastoneoff==0 && atleastonegray>=1) {exptcalls[counter]=6;}
+		
+		table2[i,j] = exptcalls[counter];
+		counter = counter + 1;
+	}
+}
+
+
+for (i in 1:6) {
+	final_table[i,1]=sum(exptcalls==i);
+}
+
+print("Geneset voting")
+
+final_calls=matrix(0,nrow=num_genes,ncol=num_experiments);
+
+for (i in 1:num_genes)
+{
+	for (j in 1:num_experiments)
+	{
+		if (cutoff_calls[i,j]>0) {final_calls[i,j]=1}
+		else if (cutoff_calls[i,j]<0) {final_calls[i,j]=-1}
+	}
+}
+
+changed_calls=matrix(0,nrow=num_genes,ncol=num_experiments);
+done = 0;
+
+while (done != 1)
+{
+	
+done = 1;
+print("looping")
+
+for (i in 1:length(split_genesets))
+{
+	geneset = split_genesets[[i]];
+	geneset_cutoff_calls = matrix(0,nrow=length(geneset),ncol=num_experiments);
+	geneset_final_calls = matrix(0,nrow=length(geneset),ncol=num_experiments);
+	j=1;
+	
+	for (k in geneset) 
+	{
+		geneset_cutoff_calls[j,] = cutoff_calls[k,];
+		geneset_final_calls[j,] = final_calls[k,];
+		j=j+1;
+	}
+	
+	for (j in 1:num_experiments) 
+	{
+		cross_product_value = 0;
+		
+		if (sum(geneset_final_calls[,j] > 0) > sum(geneset_final_calls[,j] < 0))
+		{
+			cross_product_value = 1;
+		}
+		else if (sum(geneset_final_calls[,j] > 0) < sum(geneset_final_calls[,j] < 0))
+		{
+			cross_product_value = -1;
+		}
+		else if (mean(geneset_cutoff_calls[,j]) > .5)
+		{
+			cross_product_value = 1;
+		}
+		else if (mean(geneset_cutoff_calls[,j]) < -.5)
+		{
+			cross_product_value = -1;
+		}
+		
+		if (cross_product_value != 0)
+		{
+			for (k in geneset)
+			{
+				if (changed_calls[k,j] != -1)
+				{
+					if (changed_calls[k,j] != 0 && final_calls[k,j] != cross_product_value)
+					{
+						final_calls[k,j] = 0;
+						changed_calls[k,j] = -1;
+						done = 0;
+					}
+					else if (final_calls[k,j] != cross_product_value)
+					{
+						final_calls[k,j]=cross_product_value;
+						changed_calls[k,j] = changed_calls[k,j] + 1;
+						done = 0;
+					}
+				}
+			}
+		}
+	}
+}
+
+print(c("number of changed calls: ", sum(changed_calls==-1)));
+
+}
+
+print("Assessing consistency of cutoffs after voting");
+
+table3=matrix(0,nrow=length(split_genesets),ncol=num_experiments);
+exptcalls = matrix(0,nrow=(length(split_genesets)*num_experiments), ncol=1);
+counter = 1;
+howmanyonoffgray = c();
+
+for (i in 1:length(split_genesets))
+{
+	geneset = split_genesets[[i]];
+	geneset_calls = matrix(0,nrow=length(geneset),ncol=num_experiments);
+	j=1;
+	
+	for (k in geneset) 
+	{
+		geneset_calls[j,] = final_calls[k,];
+		j=j+1;
+	}
+	
+	for (j in 1:num_experiments) 
+	{
+		atleastoneon=sum(geneset_calls[,j] > 0);
+		atleastonegray=sum(geneset_calls[,j]==0);
+		atleastoneoff=sum(geneset_calls[,j] < 0);
+
+		##1 means all genes in set are on for this experiment##
+		if (atleastoneon>=1 && atleastoneoff==0 && atleastonegray==0) {exptcalls[counter]=1;}
+		##2 means all genes in set are off for this experiment##
+		else if (atleastoneon==0 && atleastoneoff>=1 && atleastonegray==0) {exptcalls[counter]=2;}
+		##3 means all genes in set are either off or gray for this experiment##
+		else if (atleastoneon==0 && atleastoneoff>=1 && atleastonegray>=1) {exptcalls[counter]=3;}
+		##4 means all genes in set are either on or gray for this experiment##
+		else if (atleastoneon>=1 && atleastoneoff==0 && atleastonegray>=1) {exptcalls[counter]=4;}
+		##5 means at least one gene in set is off and at least one gene is on for this experiment##
+		else if (atleastoneon>=1 && atleastoneoff>=1)
+		{
+			exptcalls[counter]=5;
+			howmanyonoffgray = rbind(howmanyonoffgray, c(i,j,atleastoneon,atleastoneoff,atleastonegray));
+		}
+		##6 means all genes in set are gray for this experiment##
+		else if (atleastoneon==0 && atleastoneoff==0 && atleastonegray>=1) {exptcalls[counter]=6;}
+		
+		table3[i,j] = exptcalls[counter];
+		counter = counter + 1;
+	}
+}
+
+
+for (i in 1:6) {
+	final_table[i,2]=sum(exptcalls==i);
+}
+
+rownames(final_table)=c("all on", "all off", "off or gray", "on or gray", "inconsistent", "all gray");
+write.table(final_table, file=paste(output_dir, "final_quality.txt", sep="/"), col.names=FALSE, row.names=TRUE, sep="\t", quote=FALSE);
+write.table(howmanyonoffgray,file=paste(output_dir, "howmanyonoffgray.txt", sep="/"));
+write.table(cutoffs,file=paste(output_dir, "cutoffs.txt", sep="/"), col.names=FALSE, row.names=FALSE);
+colnames(final_calls)=colnames(all_geneexp);
+rownames(final_calls)=rownames(all_geneexp);
+write.table(final_calls,file=paste(output_dir,"final_on_off_calls.txt", sep="/"), quote=FALSE, sep="\t", col.names=TRUE,row.names=TRUE);

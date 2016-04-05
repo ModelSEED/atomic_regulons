@@ -1,0 +1,718 @@
+#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+
+#########################################################################
+# -*- perl -*-
+#
+# Copyright (c) 2003-2006 University of Chicago and Fellowship
+# for Interpretations of Genomes. All Rights Reserved.
+#
+# This file is part of the SEED Toolkit.
+# 
+# The SEED Toolkit is free software. You can redistribute
+# it and/or modify it under the terms of the SEED Toolkit
+# Public License. 
+#
+# You should have received a copy of the SEED Toolkit Public License
+# along with this program; if not write to the University of Chicago
+# at info@ci.uchicago.edu or the Fellowship for Interpretation of
+# Genomes at veronika@thefig.info or download a copy from
+# http://www.theseed.org/LICENSE.TXT.
+#
+
+use DB_File;
+use FileHandle;
+use File::stat;
+use File::Basename;
+
+use Data::Dumper;
+use Statistics::Descriptive;
+use strict;
+use ExpressionDir;
+
+@ARGV == 1 or die "Usage: compute_atomic_regulons_for_dir expr-dir\n";
+
+my $expr_dir = shift;
+my $exprO = ExpressionDir->new($expr_dir);
+
+process_dir($exprO);
+
+sub process_dir
+{
+    my($exprO) = @_;
+    my $genome = $exprO->genome_id;
+    
+    &build_atomic_regulons($exprO,$genome);
+#    &build_experiment_vectors($exprO,$genome);
+#    &compute_exp_distances($exprO,$genome);
+#    &build_ar_vectors($exprO,$genome);
+#    &compute_ar_distances($exprO,$genome);
+#    &build_ar_trees($exprO,$genome);
+#    &build_exp_trees($exprO,$genome);
+#    &build_mix_values($exprO,$genome,$mix);
+}
+
+# sub build_scored_corr {
+#     my($exprO,$mixH) = @_;
+
+#     my $dir = $exprO->expr_dir;
+#     my %pearson_hash;
+#     my $pearson_hash_tie = tie %pearson_hash,'DB_File',"$dir/pearson.DB",O_RDONLY,0666,$DB_BTREE;
+#     my @sets = map { chomp; [split(/,/,$_)] } `cat $dir/gene.sets`;
+#     my $sets = \@sets;
+#     my $setI;
+#     my %peg_to_set;
+#     for ($setI=0; ($setI < @$sets); $setI++)
+#     {
+# 	my $set = $sets->[$setI];
+# 	foreach my $peg (@$set)
+# 	{
+# 	    $peg_to_set{$peg} = $setI;
+# 	}
+#     }
+#     my $corrH;
+#     foreach my $peg (map { my($genome,$pegN) = split(/,/,$_); "fig|$genome.$pegN" } keys(%pearson_hash))
+#     {
+# 	my($set1,$set2);
+# 	if (($mix->{$peg}) && defined($set1 = $peg_to_set{$peg}))
+# 	{
+# 	    my $connH = &conn_by_pc($peg,\%pearson_hash);
+# 	    foreach my $peg2 (keys(%$connH))
+# 	    {
+# 		if ((my $x = $connH->{$peg2}) && ($set2 = $peg_to_set{$peg2}))
+# 		{
+# 		    $x = $x * $mix->{$peg};
+# 		    if (! $corrH->{$set1}->{$set2})
+# 		    {
+# 			$corrH->{$set1}->{$set2} = $x;
+# 		    }
+# 		    else
+# 		    {
+# 			$corrH->{$set1}->{$set2} += $x;
+# 		    }
+# 		}
+# 	    }
+# 	}
+#     }
+
+#     open(CORR,">$dir/sets.corr") || die "could not open $dir/sets.corr";
+#     foreach my $set1 (sort {$a <=> $b } keys(%$corrH))
+#     {
+# 	my $hash = $corrH->{$set1};
+# 	foreach my $set2 (keys(%$hash))
+# 	{
+# 	    my $sc = sprintf("%0.3f",$hash->{$set2});
+# 	    if ($sc > 0.001)
+# 	    {
+# 		print CORR join("\t",$set1,$set2,$sc),"\n";
+# 	    }
+# 	}
+#     }
+#     close(CORR);
+# }
+
+# sub build_mix_values {
+#     my($exprO,$genome,$mixH) = @_;
+
+#     my $expD = $exprO->expr_dir;
+#     open(MIX,">$expD/mix.values") || die "could not open mix.values";
+#     my($vecs,$sz1) = &read_on_off($genome);
+#     foreach my $peg (keys(%$vecs))
+#     {
+# 	my $v = $vecs->{$peg};
+# 	my $on = &v_occurs($v,1);
+# 	my $off = &v_occurs($v,-1);
+# 	my $min = ($on > $off) ? $off : $on;
+# 	my $max = ($on < $off) ? $off : $on;
+# 	my $mix = sprintf("%0.3f", (($min+1)/($max+1)));
+# 	print MIX "$peg\t$mix\n";
+# 	$mixH->{$peg} = $mix;
+#     }
+# }
+
+sub v_occurs {
+    my($v,$x) = @_;
+
+    my $tot = 0;
+    foreach $_ (@$v) 
+    { 
+	if ($_ eq $x) { $tot++ }
+    }
+    return $tot;
+}
+
+use Clustering;
+use tree_utilities;
+sub build_ar_trees {
+    my($exprO,$genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    my $linkage = "avg_dist";
+
+    my %conn;
+    my %reg;
+    foreach $_ (`cat $expD/ar.vectors.distances`)
+    {
+	if ($_ =~ /^(\d+)\t(\d+)\t(\S+)/)
+	{
+	    $conn{$1}->{$2} = $conn{$2}->{$1} = $3;
+	}
+    }
+
+    my $maxD;
+    for ($maxD=0.05; ($maxD <= 0.35); $maxD += 0.05)
+    {
+	my($clusters,$trees) = &Clustering::cluster(\%conn,$maxD,$linkage);
+	open(TREES,">$expD/ar.trees-$maxD.nwk") || die "could not open $expD/ar.trees-$maxD.nwk";
+	foreach my $tree (@$trees)
+	{
+	    print TREES &tree_utilities::to_newick($tree),"\n//\n";
+	}
+	close(TREES);
+	open(CLUST,">$expD/ar.clusters-$maxD") || die "could not open $expD/ar.clusters-$maxD";
+	foreach my $clust (@$clusters)
+	{
+	    print CLUST join(",",@$clust),"\n";
+	}
+	close(CLUST);
+    }
+}
+
+sub build_exp_trees {
+    my($exprO,$genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    my $linkage = "avg_dist";
+
+    my %conn;
+    my %reg;
+    foreach $_ (`cat $expD/experiment.vectors.distances`)
+    {
+	if ($_ =~ /^(\d+)\t(\d+)\t(\S+)/)
+	{
+	    $conn{$1}->{$2} = $conn{$2}->{$1} = $3;
+	}
+    }
+
+    my $maxD;
+    for ($maxD=0.05; ($maxD <= 0.35); $maxD += 0.05)
+    {
+	my($clusters,$trees) = &Clustering::cluster(\%conn,$maxD,$linkage);
+	open(TREES,">$expD/experiment.trees-$maxD.nwk") || die "could not open $expD/experiment.trees-$maxD.nwk";
+	foreach my $tree (@$trees)
+	{
+	    print TREES &tree_utilities::to_newick($tree),"\n//\n";
+	}
+	close(TREES);
+	open(CLUST,">$expD/experiment.clusters-$maxD") || die "could not open $expD/experiment.clusters-$maxD";
+	foreach my $clust (@$clusters)
+	{
+	    print CLUST join(",",@$clust),"\n";
+	}
+	close(CLUST);
+    }
+}
+
+sub read_atomic_regulons {
+    my($exprO, $genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    my $ar = [];
+    foreach $_ (`cat $expD/atomic.regulons`)
+    {
+	if ($_ =~ /^(\d+)\t(\S+)/)
+	{
+	    push(@{$ar->[$1-1]},$2);
+	}
+    }
+    return $ar;
+}
+
+sub compute_exp_distances {
+    my($exprO,$genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    open(EXPDIST,">$expD/experiment.vectors.distances") || die "could not open $expD/experiment.vectors.distances";
+    my $expV = &read_exp_vecs($exprO, $genome);
+    my @vecIDs = sort { $a <=> $b } keys(%$expV);
+    my($i,$j);
+    for ($i=0; ($i < $#vecIDs); $i++)
+    {
+	for ($j=$i+1; ($j < @vecIDs); $j++)
+	{
+	    my $d = &distance($expV,$vecIDs[$i],$vecIDs[$j]);
+	    print EXPDIST join("\t",($vecIDs[$i],$vecIDs[$j],$d)),"\n";
+	    print EXPDIST join("\t",($vecIDs[$j],$vecIDs[$i],$d)),"\n";
+	}
+    }
+    close(EXPDIST);
+}
+
+sub compute_ar_distances {
+    my($exprO,$genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    open(ARDIST,">$expD/ar.vectors.distances") || die "could not open $expD/ar.vectors.distances";
+    my $arV = &read_ar_vecs($exprO, $genome);
+    my @vecIDs = sort { $a <=> $b } keys(%$arV);
+    my($i,$j);
+    for ($i=0; ($i < $#vecIDs); $i++)
+    {
+	for ($j=$i+1; ($j < @vecIDs); $j++)
+	{
+	    my $d = &distance($arV,$vecIDs[$i],$vecIDs[$j]);
+	    print ARDIST join("\t",($vecIDs[$i],$vecIDs[$j],$d)),"\n";
+	    print ARDIST join("\t",($vecIDs[$j],$vecIDs[$i],$d)),"\n";
+	}
+    }
+    close(EXPDIST);
+}
+
+sub read_ar_vecs {
+    my($exprO, $genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    return {map { $_ =~ /^(\d+)\t(\S+)/; $1 => [split(/,/,$2)] } `cat $expD/ar.vectors`}
+}
+
+sub read_exp_vecs {
+    my($genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    return {map { $_ =~ /^(\d+)\t(\S+)/; $1 => [split(/,/,$2)] } `cat $expD/experiment.vectors`}
+}
+
+sub distance {
+    my($idH,$v1,$v2) = @_;
+
+#   $sim can range from -1 to 1.
+#   I am defining distance as 1 - (($sim + 1)/2)
+    my $sim = &dot_product(&unit_vector($idH->{$v1}),&unit_vector($idH->{$v2}));
+    return sprintf("%0.4f",1 - (($sim + 1)/2));
+}
+
+sub build_ar_vectors {
+    my($exprO,$genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    open(ARVEC,">$expD/ar.vectors") || die "could not open $expD/ar.vectors";
+
+    my $ar            = &read_atomic_regulons($exprO, $genome);
+    my($vecs,$vec_sz) = &read_vecs($exprO, $genome);
+    my $on_off_vecs   = $vecs->[0];
+    my $i;
+    my @vals;
+    for ($i=0; ($i < @$ar); $i++) 
+    {
+	my $j;
+	for ($j=0; ($j < $vec_sz); $j++)
+	{
+	    $vals[$j] = &ar_status($ar->[$i],$j,$on_off_vecs);
+	}
+	print ARVEC $i+1,"\t",join(",",@vals),"\n";
+    }
+    close(ARVEC);
+}
+    
+
+sub build_experiment_vectors {
+    my($exprO,$genome) = @_;
+
+    my $expD = $exprO->expr_dir;
+    open(EXPVEC,">$expD/experiment.vectors") || die "could not open $expD/experiment.vectors";
+
+    my $ar            = &read_atomic_regulons($exprO, $genome);
+    my($vecs,$vec_sz) = &read_vecs($exprO, $genome);
+    my $on_off_vecs   = $vecs->[0];
+    my $i;
+    my @vals;
+    for ($i=0; ($i < $vec_sz); $i++) 
+    {
+	my $j;
+	for ($j=0; ($j < @$ar); $j++)
+	{
+	    $vals[$j] = &ar_status($ar->[$j],$i,$on_off_vecs);
+	}
+	print EXPVEC $i+1,"\t",join(",",@vals),"\n";
+    }
+    close(EXPVEC);
+}
+
+sub ar_status {
+    my($ar1,$expI,$on_off_vecs) = @_;
+
+    my @pegs = @$ar1;
+    my $on  = 0;
+    my $off = 0;
+    foreach my $peg (@pegs)
+    {
+	my $v = $on_off_vecs->{$peg}->[$expI];
+	if     ($v == 1)  { $on++ }
+	elsif  ($v == -1) { $off++ }
+    }
+
+    if    ($on > $off)   { return 1 }
+    elsif ($on < $off)   { return -1 }
+    else                 { return 0 }
+}
+
+sub dot_product {
+    my($v1,$v2) = @_;
+
+    $v1 = &unit_vector($v1);
+    $v2 = &unit_vector($v2);
+
+    my $tot = 0;
+    my $i;
+    for ($i=0; ($i < @$v1); $i++)
+    {
+	if ($v1->[$i] && $v2->[$i])
+	{
+	    $tot += $v1->[$i] * $v2->[$i];
+	}
+    }
+    return $tot;
+}
+
+sub unit_vector {
+    my($v) = @_;
+
+    my $tot = 0;
+    my $uv  = [];
+    my $i;
+    for ($i = 0; ($i < @$v); $i++)
+    {
+	my $x = $v->[$i];
+	if (defined($x))
+	{
+	    $tot += $x * $x;
+	}
+    }
+
+    my $nf = sqrt($tot);
+    for ($i = 0; ($i < @$v); $i++)
+    {
+	my $x = $v->[$i];
+	$x    = $x ? $x : 0;
+	push(@$uv,$nf ? sprintf("%0.4f",($x / $nf)) : 0);
+    }
+    return $uv;
+}
+
+sub build_atomic_regulons {
+    my($exprO,$genome) = @_;
+
+    my $all_pegs = [$exprO->all_features('peg')];
+    my $pegH     = $exprO->ids_to_functions( $all_pegs );
+
+    my $expD = $exprO->expr_dir;
+    open(AR,">$expD/atomic.regulons") || die "could not open $expD/atomic.regulons";
+    
+    my($vecs,$vec_sz) = &read_vecs($exprO, $genome);
+    my $on_off_vecs   = $vecs->[0];
+    my $clusters      = &atomic_regulons($exprO, $genome);
+##
+## Here we keep only conjectures that have few contradictions.  I set the value to 2 % of the arrays
+## 
+    my @perfect       = sort { @{$b->[1]} <=> @{$a->[1]} }
+                        map { (($_->[0] / $vec_sz) <= 0.02) ? $_->[1] : () } &scored_clusters($clusters,$vecs);
+
+    my @ar = &condense_sets(\@perfect);
+
+    my $nxt = 1;     ## I flipped and decided to renumber the sets ##
+    @ar = sort { @{$b->[1]} <=> @{$a->[1]} } @ar;
+    @ar = map { $_->[1] } @ar;
+
+    #
+    # Now I am going to put all PEGs with identical on/off values into
+    # the same set by 1) merging sets containing them and 2) adding pegs
+    # that were not put into atomic regulons
+    #
+    @ar = &extend_ar($genome,$on_off_vecs,\@ar);
+    foreach my $pegs (sort { @$b <=> @$a } @ar)
+    {
+	foreach my $peg (@$pegs)
+	{
+	    print AR join("\t",($nxt,$peg,&func_of($pegH,$peg))),"\n";
+	}
+	$nxt++;
+    }
+    close(AR);
+}
+
+# $sets points to a list of 2-tuples [$set,$pegs]
+sub condense_sets {
+    my($sets) = @_;
+
+    my $set_to_pegs = {};
+    my $peg_to_sets = {};
+    my %sz;
+
+    foreach my $tuple (@$sets)
+    {
+	my($set,$pegs) = @$tuple;
+	$sz{$set} = @$pegs;
+	foreach my $peg (@$pegs)
+	{
+	    $set_to_pegs->{$set}->{$peg} = 1;
+	    $peg_to_sets->{$peg}->{$set} = 1;
+	}
+    }
+
+    foreach my $peg (keys(%$peg_to_sets))
+    {
+	my @in = sort { $sz{$b} <=> $sz{$a} } keys(%{$peg_to_sets->{$peg}});
+	if (@in > 1)
+	{
+	    my $i;
+	    for ($i=1; ($i < @in); $i++)
+	    {
+		my @pegs1 = keys(%{$set_to_pegs->{$in[0]}});
+		my @pegs2 = keys(%{$set_to_pegs->{$in[$i]}});
+		my @pegs = (@pegs1,@pegs2);
+
+		if (1) # (&compatible(\@pegs))
+		{
+		    foreach my $peg1 (@pegs2)
+		    {
+			$set_to_pegs->{$in[0]}->{$peg1} = 1;
+			delete $set_to_pegs->{$in[$i]}->{$peg1};
+			$peg_to_sets->{$peg1}->{$in[0]} = 1;
+			delete $peg_to_sets->{$peg1}->{$in[$i]};
+		    }
+		}
+	    }
+	}
+    }
+
+    my @ar;
+    foreach my $set (keys(%$set_to_pegs))
+    {
+	my @pegs = sort { &SeedUtils::by_fig_id($a,$b) } keys(%{$set_to_pegs->{$set}});
+	if (@pegs > 1)
+	{
+	    push(@ar,[$set,\@pegs]);
+	}
+    }
+    return @ar;
+}
+
+sub compatible { 
+    my($pegs) = @_;
+
+    my $genome = &SeedUtils::genome_of($pegs->[0]);
+
+    my $dir = "$FIG_Config::data/ExpressionData";
+    my %pearson_hash;
+    my $pearson_hash_tie = tie %pearson_hash,'DB_File',"$dir/pearson.DB",O_RDONLY,0666,$DB_BTREE;
+
+    my ($i,$j);
+    my $ok = 1;
+    for ($i=0; $ok && ($i < @$pegs); $i++)
+    {
+	my $hash = &conn_by_pc($pegs->[$i],\%pearson_hash);
+	for ($j=0; $ok && ($j < @$pegs); $j++)
+	{
+	    if ($pegs->[$i] ne $pegs->[$j])
+	    {
+		my $pc = $hash->{$pegs->[$j]};
+		if (! (defined($pc = $hash->{$pegs->[$j]}) && ($pc >= 0.5)))
+		{
+		    $ok = 0;
+		}
+	    }
+	}
+    }
+    undef $pearson_hash_tie;
+    untie %pearson_hash;
+    return $ok;
+}
+
+sub extend_ar {
+    my($genome,$on_off_vecs,$ars) = @_;
+
+    my %by_on_off;
+    while (my($peg,$vals) = each(%$on_off_vecs))
+    {
+	push(@{$by_on_off{join("",@$vals)}},$peg);
+    }
+    my @new_sets = map { my $x = $by_on_off{$_}; (@$x > 1) ? $x : () } keys(%by_on_off);
+#   print STDERR &Dumper([map { &member('fig|300852.3.peg.1',$_) ? $_ : () } @new_sets]); die "aborted";
+    my $n = 1;
+    my @all = map { [$n++,$_] } (@$ars,@new_sets);
+    my @condensed = map { $_->[1] } &condense_sets(\@all);
+    return @condensed;
+}
+
+sub func_of {
+    my($pegH,$peg) = @_;
+
+    my $func = $pegH->{$peg};
+    $func = $func ? $func : 'hypothetical protein';
+    return $func;
+}
+
+sub scored_clusters {
+    my($clusters,$vecs) = @_;
+    my @scored = map { [&scored_cluster($vecs,$_->[1]),$_] } @$clusters;
+    return @scored;
+}
+
+sub scored_cluster {
+    my($vecs,$pegs) = @_;
+    my($i,$j);
+    my $high_sc = 0;
+
+    for ($i=0; ($i < (@$pegs-1)); $i++)
+    {
+	for ($j=$i+1; ($j < @$pegs); $j++)
+	{
+	    my($v1,$v2);
+	    if (($v1 = $vecs->[0]->{$pegs->[$i]}) &&
+		($v2 = $vecs->[0]->{$pegs->[$j]}))
+	    {
+		my $sc = &scored_pair($v1,$v2);
+
+		if ($sc > $high_sc)
+		{
+		    $high_sc = $sc;
+		}
+	    }
+	}
+    }
+    return $high_sc;
+}
+
+sub scored_pair {
+    my($v1,$v2) = @_;
+
+    if ((! $v1) || (! $v2)) { return 0 }
+
+    my $i;
+    my $match = 0;
+    my $mismatch = 0;
+    my $sc = 0;
+    for ($i=0; ($i < @$v1); $i++)
+    {
+	if (($v1->[$i] != 0) && ($v2->[$i] != 0))
+	{
+	    if ($v1->[$i] != $v2->[$i])
+	    {
+		$mismatch++;
+	    }
+	    else
+	    {
+		$match++;
+	    }
+	}
+    }
+    return ($match+$mismatch) ? int(($mismatch * 100) / ($match+$mismatch)) : 0;
+}
+
+
+sub member {
+    my($x,$xL) = @_;
+
+    my $i;
+    for ($i=0; ($i < @$xL) && ($x ne $xL->[$i]); $i++) {}
+    return ($i < @$xL);
+}
+
+
+sub read_vecs {
+    my($exprO, $genome) = @_;
+
+    my($vecs1,$sz1) = &read_on_off($exprO,$genome);
+    my($vecs2,$sz2) = &read_normalized_values($exprO, $genome);
+    if ($sz1 != $sz2) { die "sz1=$sz1 sz2=$sz2" }
+    my $cutoffs = &cutoffs($exprO, $genome);
+    return ([$vecs1,$vecs2,$cutoffs],$sz1);
+}
+
+###################
+
+sub atomic_regulons {
+    my($exprO, $genome) = @_;
+    my $dir = $exprO->expr_dir;
+
+    my $n = 1;
+    my @clusters = ();
+    foreach $_ (`cat $dir/coregulated.*`)
+    {
+	if ($_ =~ /^(fig\S+)(\t(\S.*\S))?/)
+	{
+	    my $desc = $3 ? $3 : '';
+	    my $pegs = [split(/,/,$1)];
+	    push(@clusters,[$n++,$pegs,$desc]);
+	}
+    }
+    return \@clusters;
+}
+
+sub get_pc_hash {
+    my($pegs) = @_;
+
+    my $corrH = &get_corr(&SeedUtils::genome_of($pegs->[0]));
+    my $hash  = &compute_pc($pegs,$corrH);
+    return $hash;
+}
+
+sub read_on_off {
+    my($exprO,$genome) = @_;
+    return  &read_vecs1($exprO, $genome,"final_on_off_calls.txt");
+}
+
+sub read_normalized_values {
+    my($exprO, $genome) = @_;
+
+    &read_vecs1($exprO, $genome,"rma_normalized.tab");
+}
+
+sub cutoffs {
+    my($exprO, $genome) = @_;
+
+    my $dir = $exprO->expr_dir;
+
+    return [map { $_ =~ /^(\S+)\s+(\S+)/; [sprintf("%0.3f",$1),sprintf("%0.3f",$2)] } `cat $dir/cutoffs.txt`];
+}
+
+###################
+sub read_vecs1 {
+    my($exprO, $genome,$file) = @_;
+
+    my $dir = $exprO->expr_dir;
+
+    my %seen;
+    my $vecs = {};
+    my $sz;
+    foreach $_ (`cat $dir/$file`)
+    {
+	if ($_ =~ /^(fig\|\d+\.\d+\.(peg|rna)\.\d+)\t(\S.*\S)/)
+	{
+	    my $peg = $1;
+	    my $vec = [split(/\t/,$3)];
+	    if (! $sz)
+	    {
+		$sz = @$vec;
+	    }
+	    if (! $seen{$peg})
+	    {
+		$seen{$peg} = 1;
+		if (@$vec != $sz)  { die 'malformed vectors' }
+		$vecs->{$peg} = $vec;
+	    }
+	}
+    }
+    return ($vecs,$sz);
+}
+
+sub conn_by_pc {
+    my($peg,$pearson_hash) = @_;
+
+    my($genome,$pegN) = ($peg =~ /fig\|(\d+\.\d+)\.((peg|rna)\.\d+)$/);
+    my $to = {};
+    if ($_ = $pearson_hash->{"$genome,$pegN"})
+    {
+	$to = {map { $_ =~ /(\S+):(\S+)$/; ("fig\|$genome\.$2" => $1) } split(/,/,$_) };
+    }
+    return $to;
+}

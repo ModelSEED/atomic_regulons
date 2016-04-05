@@ -1,0 +1,77 @@
+{
+    "ver": "0.0.1",
+    "authors": [
+        "janakakbase"
+    ],
+    "contact": "help@kbase.us",
+    "categories": ["active"],
+    "widgets": {
+        "input": null,
+        "output": null
+    },
+    "parameters": [ 
+        {
+            "id": "contigset_id",
+            "optional": false,
+            "advanced": false,
+            "allow_multiple": false,
+            "default_values": [ "" ],
+            "field_type": "text",
+            "text_options": {
+                "valid_ws_types": [ "KBaseGenomes.ContigSet" ]
+            }
+        },
+        {
+            "id": "min_length",
+            "optional": false,
+            "advanced": false,
+            "allow_multiple": false,
+            "default_values": [ "" ],
+            "field_type": "text",
+            "text_options": {
+                "validate_as": "int",
+                "min_integer" : 0
+            }
+        }
+    ],
+    "behavior": {
+        "service-mapping": {
+            "url": "",
+            "name": "atomic_regulons",
+            "method": "filter_contigs",
+            "input_mapping": [
+                {
+                    "narrative_system_variable": "workspace",
+                    "target_property": "workspace"
+                },
+                {
+                    "input_parameter": "contigset_id",
+                    "target_property": "contigset_id"
+                },
+                {
+                    "input_parameter": "min_length",
+                    "target_property": "min_length"
+                }
+            ],
+            "output_mapping": [
+                {
+                    "service_method_output_path": [0],
+                    "target_property": "contig_filter_result"
+                },
+                {
+                    "input_parameter": "contigset_id",
+                    "target_property": "input_contigset_id"
+                },
+                {
+                    "input_parameter": "min_length",
+                    "target_property": "input_min_length"
+                },
+                {
+                    "narrative_system_variable": "workspace",
+                    "target_property": "workspace_name"
+                }
+            ]
+        }
+    },
+    "job_id_output_field": "docker"
+}
