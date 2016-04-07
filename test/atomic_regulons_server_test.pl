@@ -63,8 +63,8 @@ eval {
 
 =cut
 
-my $exp = "Shew_proper_data";
-my $geno = "Shew_MR1";
+my $exp = "e.coli";
+my $geno = "kb|g.0";
 my $ws = "jplfaria:1457040939310";
 
 eval {

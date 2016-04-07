@@ -1,6 +1,7 @@
 package atomic_regulons::atomic_regulonsImpl;
 use Bio::KBase::Exceptions;
-use atomic_regulons::GTO;
+#use atomic_regulons::GTO;
+
 #use atomic_regulons::GTO; # use require
 # Use Semantic Versioning (2.0.0-rc.1)
 # http://semver.org
@@ -22,6 +23,7 @@ This sample module contains one small method - filter_contigs.
 use Bio::KBase::AuthToken;
 use Bio::KBase::workspace::Client;
 use Config::IniFiles;
+use atomic_regulons::GTO;
 use Data::Dumper;
 
 ########
@@ -29,8 +31,10 @@ use Data::Dumper;
 # perl for_ross.pl  GTO_SS Emat PC
 
 use strict;
-use ExpressionDir;
+use atomic_regulons::ExpressionDir;
 use File::Copy::Recursive;
+use gjoseqlib;
+use BasicLocation;
 ########
 
 #END_HEADER
@@ -148,7 +152,9 @@ sub compute_atomic_regulons
     #print &Dumper ($em);
     #die;
 
-    my $genomeID = $gto->[0]->{source_id};
+    my $genomeID = $gto->[0]->{data}->{source_id};
+    print "$genomeID\n\n";
+
     File::Copy::Recursive::pathmk("$expDir/$genomeID");
     open(my $oh, ">$expDir/GENOME_ID") || die "Could not write genome ID: $!";
     print $oh $genomeID;
@@ -158,25 +164,34 @@ sub compute_atomic_regulons
     #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
     print "its here now\n";
     atomic_regulons::GTO::write_seed_dir ($gto->[0],$expDir);
+    #atomic_regulons::GenomeTO::write_seed_dir();
     # Write the subsystems.
+    #simplesr ();
+    #seed_dir($gto->[0],$expDir);
+
     File::Copy::Recursive::pathmk("$expDir/$genomeID/Subsystems");
     open(my $bh, ">$expDir/$genomeID/Subsystems/bindings") || die "Could not write subsystem bindings: $!";
     open(my $sh, ">$expDir/$genomeID/Subsystems/subsystems") || die "Could not write subsystem listing: $!";
-    my $subH = $gto->{subsystems};
+    my $subH = $gto->[0]->{subsystems};
+
+    #print &Dumper ($gto->[0]);
+
     for my $sub (keys %$subH) {
-	my $subRow = $subH->{$sub};
-	my ($variant, $cellsH) = @$subRow;
-	print $sh "$sub\t$variant\n";
-	for my $role (keys %$cellsH) {
-		my $fidsL = $cellsH->{$role};
-		for my $fid (@$fidsL) {
-			print $bh "$sub\t$role\t$fid\n";
-		}
-	}
+	   my $subRow = $subH->{$sub};
+	   my ($variant, $cellsH) = @$subRow;
+	   print $sh "**$sub****\t$variant\n";
+	   for my $role (keys %$cellsH) {
+		  my $fidsL = $cellsH->{$role};
+		  for my $fid (@$fidsL) {
+			print $bh "++++++$sub+++++\t$role\t$fid\n";
+		  }
+	   }
     }
+
     close $bh;
     close $sh;
     my $e = ExpressionDir->new($expDir);
+
     $e->compute_atomic_regulons();
 
 

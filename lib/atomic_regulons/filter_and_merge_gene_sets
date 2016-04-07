@@ -1,0 +1,116 @@
+#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+
+use strict;
+use ExpressionDir;
+use Data::Dumper;
+
+#
+# Single-script replacement for this pipeline:
+#
+# &run("cat $exp_ed/coregulated.clusters $exp_ed/coregulated.subsys | cut -f1 | $FIG_Config::bin/merge_gene_sets | filter_on_known $exp_ed/raw_data.tab > $exp_ed/merged.clusters");
+
+@ARGV > 1 or die "Usage: filter_and_merge_gene_sets expr-dir set-file [set-file ...]\n";
+
+my $expr_dir = shift;
+
+my @files = @ARGV;
+
+my $exprO = ExpressionDir->new($expr_dir);
+
+my (%genes_to_sets);
+my @sets;
+
+my $nxt = 0;
+for my $file (@files)
+{
+    open(my $fh, "<", $file) or die "Cannot open $file: $!";
+    while (<$fh>)
+    {
+	my($peg_list) = /^(\S+)/;
+	my @genes = split ",", $peg_list;
+	$sets[$nxt] = \@genes;
+	foreach my $gene (@genes)
+	{
+	    push(@{$genes_to_sets{$gene}},$nxt);
+	}
+	$nxt++;
+    }
+    close($fh);
+}
+
+foreach my $gene (sort { &SeedUtils::by_fig_id($a,$b) } keys %genes_to_sets)
+{
+    my $in = $genes_to_sets{$gene};
+    if ((! defined($in)) || (@$in ==0)) 
+    {
+	print STDERR &Dumper($gene,$genes_to_sets{$gene},$in); die "HERE";
+    }
+
+    if (@$in > 1)
+    {
+	my @to_merge = sort { $a <=> $b } @$in;
+	my $i;
+	for ($i=1; ($i < @to_merge); $i++)
+	{
+	    my $from = $to_merge[$i];
+	    my $to   = $to_merge[0];
+	    if (&can_merge($sets[$from],$sets[$to]))
+	    {
+		&report($gene,\@sets,$from,$to);
+		foreach my $gene1 (@{$sets[$from]})
+		{
+		    my $x = $genes_to_sets{$gene1};
+		    my $y = [$to,grep { ($_ != $from) && ($_ != $to) } @$x];
+		    $genes_to_sets{$gene1} = $y;
+		}
+		my %new_set  = map { $_ => 1 } (@{$sets[$from]},@{$sets[$to]});
+		my $set1     = [sort { &SeedUtils::by_fig_id($a,$b) } keys(%new_set)];
+		$sets[$to]   = $set1;
+		$sets[$from] = undef;
+	    }
+	}
+    }
+}
+
+#
+# start of filter_on_known
+#
+
+my $raw_dataF = $exprO->expr_dir . "/rma_normalized.tab";
+open(R, "<", $raw_dataF) or die "Cannot open $raw_dataF: $!";
+my %known_pegs;
+while (<R>)
+{
+    if ($_ =~ /^(fig\|\d+\.\d+\.[^\.]+\.\d+)/)
+    {
+	$known_pegs{$1} = 1;
+    }
+}
+close(R);
+
+my @sets = sort { @$b <=> @$a } grep { defined($_) } @sets;
+foreach my $set (@sets)
+{
+    my @pegs = sort { &SeedUtils::by_fig_id($a,$b) } grep { $known_pegs{$_} } @$set;
+    if (@pegs > 1)
+    {
+	print join(",",@pegs),"\n";
+    }
+}
+
+sub report {
+    my($gene,$sets,$from,$to) = @_;
+    
+    print STDERR "merging $from and $to on $gene\n";	    
+    print STDERR "merging ",
+                 join(",",sort { &SeedUtils::by_fig_id($a,$b) } @{$sets->[$from]})," and ",
+                 join(",",sort { &SeedUtils::by_fig_id($a,$b) } @{$sets->[$to]}),"\n";
+}
+
+sub can_merge {
+    my($set1,$set2) = @_;
+
+    my %h1 = map { $_ => 1 } @$set1;
+    my $n  = grep { $h1{$_} } @$set2;
+    return ($n > 2) && ((@$set1 + @$set2) < 50);
+}

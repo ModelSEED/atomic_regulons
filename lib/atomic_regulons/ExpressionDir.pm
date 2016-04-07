@@ -11,7 +11,7 @@ use File::Spec::Functions;
 use Carp;
 use Fcntl ':seek';
 use GenomeTypeObject;
-    
+
 sub genome_dir {
 	my ($self, $parm) = @_;
 	if (defined $parm) {
@@ -58,7 +58,7 @@ sub new
     my $genome_id = <GF>;
     chomp $genome_id;
     close(GF);
-    
+
     my $self = {
 	genome_dir => catfile($expr_dir, $genome_id),
 	genome_id => $genome_id,
@@ -120,7 +120,7 @@ sub make_missing_probes
 	my($peg,$loc)=split "\t";
 	$locations{$loc} = $peg;
     }
-    
+
     while(<PROBES>)
     {
 	chomp;
@@ -141,6 +141,9 @@ sub make_missing_probes
 
 sub compute_atomic_regulons
 {
+    print "I am here ExpressionDir\n";
+
+
     my($self, $pearson_cutoff) = @_;
 
     $pearson_cutoff ||= 0.7;
@@ -156,7 +159,7 @@ sub compute_atomic_regulons
 	   { stdout => $coreg_clusters });
 
     my $genome_ss_dir = $self->genome_dir . "/Subsystems";
-    $self->run(["./make_coreg_conjectures_based_on_subsys", 
+    $self->run(["./make_coreg_conjectures_based_on_subsys",
 		$self->expr_dir,
 		(-d $genome_ss_dir ? $genome_ss_dir : ()),
 		],
@@ -176,13 +179,15 @@ sub compute_atomic_regulons
 
     $self->run(["./SplitGeneSets", $merged_clusters, $pearson_cutoff, $self->expr_dir],
 	   { stdout => catfile($self->expr_dir, "split.clusters") });
-    
+
     $self->run(["./compute_atomic_regulons_for_dir", $self->expr_dir]);
 }
 
 sub run
 {
     my($self, $cmd, $redirect) = @_;
+
+    print &Dumper ($redirect);
 
     print "Run @$cmd\n";
     my $rc = system_with_redirect($cmd, $redirect);
@@ -242,7 +247,7 @@ sub fid_locations
 	    while (<TBL>)
 	    {
 		my($id, $locs) = /^(\S+)\t(\S+)/;
-		
+
 		if ($fids{$id})
 		{
 		    $out->{$id} = "$genome_id:" . SeedUtils::boundary_loc($locs);
@@ -332,14 +337,14 @@ sub best_pearson_corr {
 
     my @pegs2 = $self->all_features('peg');
     my $handle = $self->get_pc_hash_strip($pegs1,\@pegs2);
-    
+
     my %ok;
     my $i;
     for ($i=0; ($i < @$pegs1); $i++)
     {
 	foreach my $peg2 ( @pegs2 )
 	{
-	    my $pc = &pearson_corr($handle,$pegs1->[$i],$peg2); 
+	    my $pc = &pearson_corr($handle,$pegs1->[$i],$peg2);
 	    if (abs($pc >= $cutoff))
 	    {
 		$ok{$pegs1->[$i]} -> {$peg2} = $pc;
@@ -378,7 +383,7 @@ sub get_corr {
     close(RAW);
     return \%gene_to_values;
 }
-    
+
 sub compute_pc_strip {
     my ($pegs1,$pegs2, $gxp_hash) = @_;
     my %values = ();
@@ -397,7 +402,7 @@ sub compute_pc_strip {
 	    }
 	}
     }
-    
+
     return \%values;
 }
 

@@ -6,12 +6,13 @@ use BasicLocation;
 use Data::Dumper;
 use strict;
 use warnings;
-use fr0g;
+#use fr0g;
 
 sub write_seed_dir
 {
-    print "after the func\n";
+
     my($self, $dir, $options) = @_;
+
 
     open(my $ctg_fh, ">", "$dir/contigs") or die "Cannot create $dir/contigs: $!";
 =head
@@ -33,12 +34,16 @@ sub write_seed_dir
 
 
 
-    $write_md->("GENETIC_CODE", $self->{data}->{genetic_code};)
+    $write_md->("GENETIC_CODE", $self->{data}->{genetic_code});
     $write_md->("GENOME", $self->{data}->{scientific_name});
     $write_md->("TAXONOMY", $self->{taxonomy}) if $self->{taxonomy};
 
-    my $features = $self->{features};  #$self->{data}->{features};
+
+    my $features = $self->{data}->{features};  #$self->{data}->{features};
     my %types = map { $_->{type} => 1 } @$features;
+
+
+
 
     my %typemap;
     if ($options->{map_CDS_to_peg})
@@ -114,7 +119,10 @@ sub write_seed_dir
             $type = 'peg';
             $fid =~ s/\.CDS\./.peg./;
         }
+
         my $function = $feature->{function} || "hypothetical protein";
+
+         print "function $function\n";
         print $func_fh "$fid\t$function\n";
 
         my $loc = $feature->{location};
@@ -136,7 +144,8 @@ sub write_seed_dir
         }
         else
         {
-            write_fasta($fasta_fh{$type}, [$fid, undef, $self->get_feature_dna($feature->{id})]);
+            #where the get_feature_dna func comes from?
+            ##write_fasta($fasta_fh{$type}, [$fid, undef, $self->get_feature_dna($feature->{id})]);
         }
 
         # typedef tuple<string comment, string annotator, int annotation_time, analysis_event_id> annotation;
@@ -158,5 +167,6 @@ sub write_seed_dir
     }
     close($anno_fh);
     close($func_fh);
+
 }
 1;

@@ -1,0 +1,88 @@
+#!/usr/bin/env Rscript
+split_geneset = function(geneset, gxp_data, pearson_cutoff)
+{
+	values=matrix(0,nrow=length(geneset), ncol=length(geneset));
+	
+	for (i in 1:(length(geneset)-1))
+	{
+		for (j in (i+1):(length(geneset)))
+		{
+			values[j,i] = cor(gxp_data[geneset[i],],gxp_data[geneset[j],], use="everything", method="pearson");
+		}	
+	}
+	
+	values=as.dist(-(values-1));
+	hc = hclust(values, method="complete");
+	treecut = cutree(hc, h=(-(pearson_cutoff-1)));
+	tb=table(treecut);	
+	num_singletons = sum(tb==1);
+	#print(c("num_singletons:", num_singletons, "out of", length(geneset), "genes"), quote=FALSE);
+	tb=tb[tb!=1]; # remove singletons
+	new_genesets = vector("list", length(tb));
+	
+	if (length(tb)==0) {return (new_genesets);}
+
+	for (i in 1:length(tb))
+	{
+		cluster = as.integer(names(tb))[i];
+		new_genesets[[i]] = geneset[treecut==cluster];
+	}
+	
+	return (new_genesets);
+}
+
+args = commandArgs(TRUE);
+if (length(args) != 3) { print("usage:  Rscript SplitGeneSets.R gene_sets pearson_cutoff output_dir"); q() }
+gene_sets_file = args[1];
+splitting_cutoff = as.numeric(args[2]);
+output_dir = args[3];
+
+## Read in gene expression data ##
+## This file is the output of 'exprs' from Bioconductor's RMA procedure
+## Header line contains experiment names
+## row name is gene id, rest of the columns are normalized expression values per experiment
+all_geneexp=as.matrix(read.table(paste(output_dir, "rma_normalized.tab", sep="/"),header=TRUE));
+num_genes = dim(all_geneexp)[1];
+num_experiments = dim(all_geneexp)[2];
+
+## Each line is a comma separated value containing gene ids corresponding to the first column in the raw data ##
+## Need to convert these to row numbers in the raw data
+input_genesets = readLines(gene_sets_file);
+input_genesets = strsplit(input_genesets, ",");
+unsplit_genesets = list();
+
+for (i in 1:length(input_genesets))
+{
+	input_geneset = input_genesets[[i]];
+	unsplit_geneset = c();
+	for (j in 1:length(input_geneset))
+	{
+		# check if the peg is in the raw_data
+		row_num = which(rownames(all_geneexp)==input_geneset[j]);
+		
+		if (length(row_num) > 0) {
+			unsplit_geneset = cbind(unsplit_geneset, row_num);
+		}
+		else {
+			print(c("Couldn't find row for", input_geneset[j]), quote=FALSE);
+		}
+	}
+	
+	if (length(unsplit_geneset) > 1) {
+		unsplit_genesets[[length(unsplit_genesets)+1]] = unsplit_geneset;
+	}
+}
+
+# Now split all the unsplit_genesets on pearson correlations
+split_genesets=list();
+
+for (i in 1:length(unsplit_genesets))
+{
+	split_genesets = append(split_genesets,split_geneset(unsplit_genesets[[i]], all_geneexp, splitting_cutoff));
+}
+
+for (i in 1:length(split_genesets))
+{
+	cat(rownames(all_geneexp)[split_genesets[[i]]], sep=",");
+	cat("\n");
+}
