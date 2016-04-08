@@ -1,9 +1,9 @@
-#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+#!/usr/bin/env perl
 use strict;
 use Carp;
 use Data::Dumper;
 use Statistics::Descriptive;
-use ExpressionDir;
+use atomic_regulons::ExpressionDir;
 
 my($expr_dir);
 my $usage = "usage: make_coreg_conjectures_based_on_subsys expr_dir [subsystems-dir]";
@@ -35,7 +35,7 @@ my $corrH = &get_corr($rawF);
 #my $genomeH = $sapO->genomes_to_subsystems( -ids => [$genome] );
 #my @subs = map { ($_->[1] =~ /^\*?(0|-1)$/) ? () : $_->[0] } @{$genomeH->{$genome}};
 #@subs = grep { ! $bad_subsystems{$_} } @subs;
- 
+
 #my $subH = $sapO->ids_in_subsystems( -subsystems => \@subs,
 #				     -genome     => $genome);
 my $subH = $exprO->ids_in_subsystems();
@@ -62,7 +62,7 @@ foreach my $sub (@subs)
 	}
 	@pegs = sort { &SeedUtils::by_fig_id($a,$b) } keys(%pegs);
     }
-    
+
     my @sets = grep { @$_ > 1 } split_on_pc(\@pegs,$corrH);
 
     if (@sets > ((@pegs + 2) / 3))
@@ -144,7 +144,7 @@ sub compute_pc
 	    $values{$gene_ids->[$j]}->{$gene_ids->[$i]} = $r;
 	}
     }
-    
+
     return \%values;
 }
 
@@ -154,7 +154,7 @@ sub corr {
     my $hash = &compute_pc([$peg1,@$cluster],$corrH);
 
 #   print STDERR &Dumper($peg1,$cluster);
-    
+
     my $sum = 0;
     foreach my $peg2 (@$cluster)
     {

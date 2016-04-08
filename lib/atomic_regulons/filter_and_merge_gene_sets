@@ -1,7 +1,7 @@
-#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+#!/usr/bin/env perl
 
 use strict;
-use ExpressionDir;
+use atomic_regulons::ExpressionDir;
 use Data::Dumper;
 
 #
@@ -41,7 +41,7 @@ for my $file (@files)
 foreach my $gene (sort { &SeedUtils::by_fig_id($a,$b) } keys %genes_to_sets)
 {
     my $in = $genes_to_sets{$gene};
-    if ((! defined($in)) || (@$in ==0)) 
+    if ((! defined($in)) || (@$in ==0))
     {
 	print STDERR &Dumper($gene,$genes_to_sets{$gene},$in); die "HERE";
     }
@@ -100,8 +100,8 @@ foreach my $set (@sets)
 
 sub report {
     my($gene,$sets,$from,$to) = @_;
-    
-    print STDERR "merging $from and $to on $gene\n";	    
+
+    print STDERR "merging $from and $to on $gene\n";
     print STDERR "merging ",
                  join(",",sort { &SeedUtils::by_fig_id($a,$b) } @{$sets->[$from]})," and ",
                  join(",",sort { &SeedUtils::by_fig_id($a,$b) } @{$sets->[$to]}),"\n";

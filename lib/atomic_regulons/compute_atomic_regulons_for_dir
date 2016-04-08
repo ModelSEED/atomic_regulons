@@ -1,4 +1,4 @@
-#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+#!/usr/bin/env perl
 
 #########################################################################
 # -*- perl -*-
@@ -7,10 +7,10 @@
 # for Interpretations of Genomes. All Rights Reserved.
 #
 # This file is part of the SEED Toolkit.
-# 
+#
 # The SEED Toolkit is free software. You can redistribute
 # it and/or modify it under the terms of the SEED Toolkit
-# Public License. 
+# Public License.
 #
 # You should have received a copy of the SEED Toolkit Public License
 # along with this program; if not write to the University of Chicago
@@ -27,7 +27,7 @@ use File::Basename;
 use Data::Dumper;
 use Statistics::Descriptive;
 use strict;
-use ExpressionDir;
+use atomic_regulons::ExpressionDir;
 
 @ARGV == 1 or die "Usage: compute_atomic_regulons_for_dir expr-dir\n";
 
@@ -40,7 +40,7 @@ sub process_dir
 {
     my($exprO) = @_;
     my $genome = $exprO->genome_id;
-    
+
     &build_atomic_regulons($exprO,$genome);
 #    &build_experiment_vectors($exprO,$genome);
 #    &compute_exp_distances($exprO,$genome);
@@ -133,8 +133,8 @@ sub v_occurs {
     my($v,$x) = @_;
 
     my $tot = 0;
-    foreach $_ (@$v) 
-    { 
+    foreach $_ (@$v)
+    {
 	if ($_ eq $x) { $tot++ }
     }
     return $tot;
@@ -301,7 +301,7 @@ sub build_ar_vectors {
     my $on_off_vecs   = $vecs->[0];
     my $i;
     my @vals;
-    for ($i=0; ($i < @$ar); $i++) 
+    for ($i=0; ($i < @$ar); $i++)
     {
 	my $j;
 	for ($j=0; ($j < $vec_sz); $j++)
@@ -312,7 +312,7 @@ sub build_ar_vectors {
     }
     close(ARVEC);
 }
-    
+
 
 sub build_experiment_vectors {
     my($exprO,$genome) = @_;
@@ -325,7 +325,7 @@ sub build_experiment_vectors {
     my $on_off_vecs   = $vecs->[0];
     my $i;
     my @vals;
-    for ($i=0; ($i < $vec_sz); $i++) 
+    for ($i=0; ($i < $vec_sz); $i++)
     {
 	my $j;
 	for ($j=0; ($j < @$ar); $j++)
@@ -406,13 +406,13 @@ sub build_atomic_regulons {
 
     my $expD = $exprO->expr_dir;
     open(AR,">$expD/atomic.regulons") || die "could not open $expD/atomic.regulons";
-    
+
     my($vecs,$vec_sz) = &read_vecs($exprO, $genome);
     my $on_off_vecs   = $vecs->[0];
     my $clusters      = &atomic_regulons($exprO, $genome);
 ##
 ## Here we keep only conjectures that have few contradictions.  I set the value to 2 % of the arrays
-## 
+##
     my @perfect       = sort { @{$b->[1]} <=> @{$a->[1]} }
                         map { (($_->[0] / $vec_sz) <= 0.02) ? $_->[1] : () } &scored_clusters($clusters,$vecs);
 
@@ -496,7 +496,7 @@ sub condense_sets {
     return @ar;
 }
 
-sub compatible { 
+sub compatible {
     my($pegs) = @_;
 
     my $genome = &SeedUtils::genome_of($pegs->[0]);

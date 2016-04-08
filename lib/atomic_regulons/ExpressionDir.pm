@@ -155,48 +155,68 @@ sub compute_atomic_regulons
     my $pegs_always_on = catfile($self->expr_dir, "pegs.always.on");
 
 
-    $self->run(["./call_coregulated_clusters_on_chromosome", $self->expr_dir],
+    $self->run(["/kb/module/lib/atomic_regulons/call_coregulated_clusters_on_chromosome", $self->expr_dir],
 	   { stdout => $coreg_clusters });
 
     my $genome_ss_dir = $self->genome_dir . "/Subsystems";
-    $self->run(["./make_coreg_conjectures_based_on_subsys",
+    $self->run(["/kb/module/lib/atomic_regulons/make_coreg_conjectures_based_on_subsys",
 		$self->expr_dir,
 		(-d $genome_ss_dir ? $genome_ss_dir : ()),
 		],
 	   { stdout => $coreg_subsys });
 
-    $self->run(["./filter_and_merge_gene_sets", $self->expr_dir, $coreg_clusters, $coreg_subsys],
+    $self->run(["/kb/module/lib/atomic_regulons/filter_and_merge_gene_sets", $self->expr_dir, $coreg_clusters, $coreg_subsys],
 	   { stdout => $merged_clusters });
-    $self->run(["./get_ON_probes", $self->expr_dir, $probes_always_on, $pegs_always_on]);
+    $self->run(["/kb/module/lib/atomic_regulons/get_ON_probes", $self->expr_dir, $probes_always_on, $pegs_always_on]);
 
     if (-s $pegs_always_on == 0)
     {
 	confess "No always-on pegs were found";
     }
 
-    $self->run(["./Pipeline", $pegs_always_on, $merged_clusters, $self->expr_dir],
+    $self->run(["/kb/module/lib/atomic_regulons/Pipeline", $pegs_always_on, $merged_clusters, $self->expr_dir],
 	   { stdout => catfile($self->expr_dir, "comments.by.Pipeline.R") });
 
-    $self->run(["./SplitGeneSets", $merged_clusters, $pearson_cutoff, $self->expr_dir],
+    $self->run(["/kb/module/lib/atomic_regulons/SplitGeneSets", $merged_clusters, $pearson_cutoff, $self->expr_dir],
 	   { stdout => catfile($self->expr_dir, "split.clusters") });
 
-    $self->run(["./compute_atomic_regulons_for_dir", $self->expr_dir]);
+    $self->run(["/kb/module/lib/atomic_regulons/compute_atomic_regulons_for_dir", $self->expr_dir]);
 }
 
 sub run
 {
     my($self, $cmd, $redirect) = @_;
 
-    print &Dumper ($redirect);
-
     print "Run @$cmd\n";
-    my $rc = system_with_redirect($cmd, $redirect);
+       my $cmdText = join(" ", @$cmd);
+    if (! $redirect) {
+        my $rc = system($cmdText);
+        if ($rc != 0)
+        {
+            confess "Command failed ($rc): $cmdText\n";
+        }
+       } else {
+        my $output = `$cmdText`;
+        open(my $oh, '>', $redirect->{stdout}) || die "Could not spool output from $cmdText: $!";
+        print $oh $output;
+        close $oh;
+    }
+}
+=head
+sub run
+{
+    my($self, $cmd, $redirect) = @_;
+
+    print &Dumper ($cmd);
+
+
+    my $rc = SeedAware::system_with_redirect($cmd, $redirect);
     if ($rc != 0)
     {
 	confess "Command failed: @$cmd\n";
     }
 }
-
+=cut
 
 sub all_features
 {

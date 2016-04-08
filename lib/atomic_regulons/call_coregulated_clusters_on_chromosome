@@ -1,11 +1,11 @@
-#!/usr/bin/env  /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+#!/usr/bin/env perl
 
 
 
 use Data::Dumper;
 use Carp;
 use Statistics::Descriptive;
-use ExpressionDir;
+use atomic_regulons::ExpressionDir;
 
 my($expr_dir);
 my $usage = "usage: call_coregulated_clusters_on_chromosome ExpressionDir";
@@ -52,7 +52,7 @@ sub get_corr {
     my($rawF) = @_;
 
     my %gene_to_values;
-    open(RAW,"<$rawF") || die "could not open $rawF";
+    open(RAW,"<$rawF") || die "could not open $rawF: $!";
     while (<RAW>)
     {
 	chomp;

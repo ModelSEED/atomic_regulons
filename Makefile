@@ -29,6 +29,7 @@ compile:
 		--plimplname $(SERVICE_CAPS)::$(SERVICE_CAPS)Impl \
 		--plpsginame $(SERVICE_CAPS).psgi;
 	chmod +x $(SCRIPTS_DIR)/entrypoint.sh
+	     ./refresh.sh
 
 build-executable-script:
 	mkdir -p $(LBIN_DIR)
@@ -62,4 +63,3 @@ test:
 
 clean:
 	rm -rfv $(LBIN_DIR)
-	
