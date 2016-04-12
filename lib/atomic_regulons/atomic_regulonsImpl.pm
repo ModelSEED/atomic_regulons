@@ -2,7 +2,7 @@ package atomic_regulons::atomic_regulonsImpl;
 use strict;
 use Bio::KBase::Exceptions;
 # Use Semantic Versioning (2.0.0-rc.1)
-# http://semver.org
+# http://semver.org 
 our $VERSION = "0.1.0";
 
 =head1 NAME
@@ -165,7 +165,9 @@ sub compute_atomic_regulons
     File::Copy::Recursive::fcopy($exp, "$expDir/rma_normalized.tab") or die "copy failed $!";
     #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
     print "its here now\n";
-    atomic_regulons::GTO::write_seed_dir ($gto->[0],$expDir);
+    #added genomeID as an option
+    atomic_regulons::GTO::write_seed_dir ($gto->[0],$expDir,$genomeID);
+
     #atomic_regulons::GenomeTO::write_seed_dir();
     # Write the subsystems.
     #simplesr ();
@@ -196,8 +198,8 @@ sub compute_atomic_regulons
 
     $e->compute_atomic_regulons();
 
-
-
+    
+    die;
 
 
     #END compute_atomic_regulons
@@ -214,7 +216,7 @@ sub compute_atomic_regulons
 
 
 
-=head2 version
+=head2 version 
 
   $return = $obj->version()
 

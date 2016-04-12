@@ -29,7 +29,8 @@ my $pegs = [$exprO->all_features('peg')];
 #print STDERR &Dumper($pegs) . "\n\n";
 my $pegH = $exprO->fid_locations($pegs);
 #print STDERR &Dumper($pegH) . "\n\n";
-my $corrH = &get_corr($rawF);
+
+#my $corrH = &get_corr($rawF);
 my @pegs_with_loc = sort { ($a->[1]->[0] cmp $b->[1]->[0]) or
 			   (($a->[1]->[1]+$a->[1]->[2]) <=> ($b->[1]->[1]+$b->[1]->[2]))
                          }

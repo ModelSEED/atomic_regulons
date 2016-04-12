@@ -51,6 +51,7 @@ Create a new ExpressionDir object from an existing expression dir.
 
 sub new
 {
+
     my($class, $expr_dir) = @_;
 
     my $gfile = catfile($expr_dir, "GENOME_ID");
@@ -153,6 +154,8 @@ sub compute_atomic_regulons
     my $merged_clusters = catfile($self->expr_dir, "merged.clusters");
     my $probes_always_on = catfile($self->expr_dir, "probes.always.on");
     my $pegs_always_on = catfile($self->expr_dir, "pegs.always.on");
+
+    print &Dumper ($self);
 
 
     $self->run(["/kb/module/lib/atomic_regulons/call_coregulated_clusters_on_chromosome", $self->expr_dir],
@@ -337,7 +340,11 @@ sub ids_to_subsystems
 sub ids_to_functions
 {
     my($self, $ids) = @_;
-    open(AF, "<", catfile($self->genome_dir, "assigned_functions"));
+    print &Dumper ($self);
+    print &Dumper ($self->expr_dir);
+
+    #open(AF, "<", catfile($self->expr_dir, "assigned_functions"));
+    open(AF, "<", catfile($self->genome_dir, "assigned_functions")); # original line
     my %ids;
     $ids{$_} = 1 for @$ids;
     my $res = {};
@@ -349,6 +356,8 @@ sub ids_to_functions
 	$res->{$id} = $fn if $ids{$id};
     }
     close(AF);
+
+
     return $res;
 }
 

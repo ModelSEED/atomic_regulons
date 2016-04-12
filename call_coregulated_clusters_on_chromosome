@@ -1,4 +1,4 @@
-#!/usr/bin/env /vol/rast-bcr/2010-1124/linux-rhel5-x86_64/bin/perl
+#!/usr/bin/env perl
 
 
 
@@ -26,9 +26,9 @@ my $rawF = $exprO->expr_dir . "/rma_normalized.tab";
 #my $pegH    = $sapO->fid_locations( -ids => $pegs, -boundaries => 1 );
 
 my $pegs = [$exprO->all_features('peg')];
-#print STDERR &Dumper($pegs) . "\n\n";
+print STDERR &Dumper($pegs) . "\n\n";
 my $pegH = $exprO->fid_locations($pegs);
-#print STDERR &Dumper($pegH) . "\n\n";
+print STDERR &Dumper($pegH) . "\n\n";
 my $corrH = &get_corr($rawF);
 my @pegs_with_loc = sort { ($a->[1]->[0] cmp $b->[1]->[0]) or
 			   (($a->[1]->[1]+$a->[1]->[2]) <=> ($b->[1]->[1]+$b->[1]->[2]))
@@ -39,6 +39,8 @@ my @pegs_with_loc = sort { ($a->[1]->[0] cmp $b->[1]->[0]) or
                     keys(%$pegH);      
 #print STDERR &Dumper(\@pegs_with_loc);
 my $clusters = &possible_clusters(\@pegs_with_loc,$corrH);
+
+die;
 foreach my $cluster (@$clusters)
 {
     if (@$cluster > 1)

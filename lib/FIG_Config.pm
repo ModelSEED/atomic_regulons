@@ -83,7 +83,8 @@ package FIG_Config;
     our $default_mysql_engine = "InnoDB";
 
     # database host server (empty string to use the default)
-    our $dbhost = "db3.chicago.kbase.us";
+    #our $dbhost = "db3.chicago.kbase.us";
+    our $dbhost = "branch.mcs.anl.gov";
 
     # TRUE to turn off size estimates during table creation--
     # should be FALSE for MyISAM
@@ -97,18 +98,18 @@ package FIG_Config;
     our $shrub_dna = "";
 
     # Insure the PATH has our scripts in it.
-    $_ = "/Users/janakaanl/KBaseRepos/atomic_regulons/SEEDtk/bin";
+    $_ = "/homes/janakae/KServices/atomic_regulons/SEEDtk/bin";
     if (! $ENV{PATH}) {
         $ENV{PATH} = $_;
-    } elsif (substr($ENV{PATH}, 0, 54) ne $_) {
+    } elsif (substr($ENV{PATH}, 0, 51) ne $_) {
         $ENV{PATH} = "$_:$ENV{PATH}";
     }
 
     # Insure the PERL5LIB has our libraries in it.
-    $_ = "/kb/module/SEEDtk/modules/tbltools/lib:/kb/module/SEEDtk/modules/RASTtk/lib:/kb/module/SEEDtk/modules/kernel/lib:/kb/module/SEEDtk/modules/ERDB/lib:/kb/module/SEEDtk/modules/utils/lib:/Users/janakaanl/KBaseRepos/atomic_regulons/SEEDtk/config";
+    $_ = "/kb/module/SEEDtk/modules/tbltools/lib:/kb/module/SEEDtk/modules/RASTtk/lib:/kb/module/SEEDtk/modules/kernel/lib:/kb/module/SEEDtk/modules/ERDB/lib:/kb/module/SEEDtk/modules/utils/lib:/homes/janakae/KServices/atomic_regulons/SEEDtk/config";
     if (! $ENV{PERL5LIB}) {
         $ENV{PERL5LIB} = $_;
-    } elsif (substr($ENV{PERL5LIB}, 0, 241) ne $_) {
+    } elsif (substr($ENV{PERL5LIB}, 0, 238) ne $_) {
         $ENV{PERL5LIB} = "$_:$ENV{PERL5LIB}";
     }
 
