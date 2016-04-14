@@ -153,7 +153,6 @@ sub compute_atomic_regulons
 
     my $genomeID = $gto->[0]->{data}->{source_id};
     print "$genomeID\n\n";
-
     File::Copy::Recursive::pathmk("$expDir/$genomeID");
     open(my $oh, ">$expDir/GENOME_ID") || die "Could not write genome ID: $!";
     print $oh $genomeID;

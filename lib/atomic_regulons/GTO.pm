@@ -175,6 +175,7 @@ sub write_seed_dir
             print $anno_fh "//\n";
         }
 =cut
+
     }
 
     for my $type (@types)
