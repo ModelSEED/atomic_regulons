@@ -166,7 +166,7 @@ sub compute_atomic_regulons
     #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
     print "its here now\n";
     #added genomeID as an option
-    atomic_regulons::GTO::write_seed_dir ($gto->[0],$expDir,$genomeID);
+    atomic_regulons::GTO::write_seed_dir ($gto->[0],"$expDir/$genomeID");
 
     #atomic_regulons::GenomeTO::write_seed_dir();
     # Write the subsystems.

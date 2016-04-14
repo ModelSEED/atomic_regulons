@@ -11,11 +11,12 @@ use warnings;
 sub write_seed_dir
 {
 
-    my($self, $dir, $g_id, $options) = @_;
+    my($self, $dir, $options) = @_;
 
 
     open(my $ctg_fh, ">", "$dir/contigs") or die "Cannot create $dir/contigs: $!";
 =head
+
     for my $contig (@{$self->{contigs}})
     {
         write_fasta($ctg_fh, [$contig->{id}, undef, $contig->{dna}]);
@@ -76,7 +77,7 @@ sub write_seed_dir
     #modified here for the assigned_functions directory
     open(my $anno_fh, ">", "$dir/annotations") or die "Cannot create $dir/annotations: $!";
 
-    my $mdir = "$dir/$g_id";
+    #my $mdir = "$dir/$g_id";
 
     #open(my $func_fh, ">", "$mdir/$fn_file") or die "Cannot create $mdir/fn_file: $!";
     open(my $func_fh, ">", "$dir/$fn_file") or die "Cannot create $dir/fn_file: $!"; # original line
@@ -86,19 +87,20 @@ sub write_seed_dir
     #maded the modification of having the $iptions GenomeID included in the path
     #mkdir("$dir/Features"); #original
     print "inside GTO\n";
-    print &Dumper ($g_id);
+    #print &Dumper ($g_id);
     print "dumped\n";
     #die;     
 
-    mkdir("$mdir/Features");
+    #mkdir("$mdir/Features");
+    mkdir("$dir/Features");
 
 
     my(%tbl_fh, %fasta_fh);
 
     for my $type (@types)
     {
-        #my $tdir = "$dir/Features/$type"; #original
-        my $tdir = "$mdir/Features/$type";
+        my $tdir = "$dir/Features/$type"; #original
+        #my $tdir = "$mdir/Features/$type";
         -d $tdir or mkdir($tdir) or die "Cannot mkdir $tdir: $!";
 
         my $fh;

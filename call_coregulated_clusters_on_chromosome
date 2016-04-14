@@ -40,7 +40,7 @@ my @pegs_with_loc = sort { ($a->[1]->[0] cmp $b->[1]->[0]) or
 #print STDERR &Dumper(\@pegs_with_loc);
 my $clusters = &possible_clusters(\@pegs_with_loc,$corrH);
 
-die;
+
 foreach my $cluster (@$clusters)
 {
     if (@$cluster > 1)
