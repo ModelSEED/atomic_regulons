@@ -112,7 +112,7 @@ sub new
 
 =head2 compute_atomic_regulons
 
-  $return = $obj->compute_atomic_regulons($workspace_name, $expression_matrix_ref, $genome_ref)
+  $return = $obj->compute_atomic_regulons($workspace, $expression_matrix_ref, $genome_ref, $expression_cutoff, $output_atomicRegulons)
 
 =over 4
 
@@ -121,16 +121,21 @@ sub new
 =begin html
 
 <pre>
-$workspace_name is an atomic_regulons.workspace_name
+$workspace is an atomic_regulons.workspace
 $expression_matrix_ref is an atomic_regulons.expression_matrix_ref
 $genome_ref is an atomic_regulons.genome_ref
+$expression_cutoff is an atomic_regulons.expression_cutoff
+$output_atomicRegulons is an atomic_regulons.output_atomicRegulons
 $return is an atomic_regulons.AtomicRegulonSet
-workspace_name is a string
+workspace is a string
 expression_matrix_ref is a string
 genome_ref is a string
+expression_cutoff is a string
+output_atomicRegulons is a string
 AtomicRegulonSet is a reference to a hash where the following keys are defined:
 	expression_matrix_ref has a value which is a string
 	genome_ref has a value which is a string
+	expression_cutoff has a value which is a string
 
 </pre>
 
@@ -138,16 +143,21 @@ AtomicRegulonSet is a reference to a hash where the following keys are defined:
 
 =begin text
 
-$workspace_name is an atomic_regulons.workspace_name
+$workspace is an atomic_regulons.workspace
 $expression_matrix_ref is an atomic_regulons.expression_matrix_ref
 $genome_ref is an atomic_regulons.genome_ref
+$expression_cutoff is an atomic_regulons.expression_cutoff
+$output_atomicRegulons is an atomic_regulons.output_atomicRegulons
 $return is an atomic_regulons.AtomicRegulonSet
-workspace_name is a string
+workspace is a string
 expression_matrix_ref is a string
 genome_ref is a string
+expression_cutoff is a string
+output_atomicRegulons is a string
 AtomicRegulonSet is a reference to a hash where the following keys are defined:
 	expression_matrix_ref has a value which is a string
 	genome_ref has a value which is a string
+	expression_cutoff has a value which is a string
 
 
 =end text
@@ -166,18 +176,20 @@ AtomicRegulonSet is a reference to a hash where the following keys are defined:
 
 # Authentication: required
 
-    if ((my $n = @args) != 3)
+    if ((my $n = @args) != 5)
     {
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error =>
-							       "Invalid argument count for function compute_atomic_regulons (received $n, expecting 3)");
+							       "Invalid argument count for function compute_atomic_regulons (received $n, expecting 5)");
     }
     {
-	my($workspace_name, $expression_matrix_ref, $genome_ref) = @args;
+	my($workspace, $expression_matrix_ref, $genome_ref, $expression_cutoff, $output_atomicRegulons) = @args;
 
 	my @_bad_arguments;
-        (!ref($workspace_name)) or push(@_bad_arguments, "Invalid type for argument 1 \"workspace_name\" (value was \"$workspace_name\")");
+        (!ref($workspace)) or push(@_bad_arguments, "Invalid type for argument 1 \"workspace\" (value was \"$workspace\")");
         (!ref($expression_matrix_ref)) or push(@_bad_arguments, "Invalid type for argument 2 \"expression_matrix_ref\" (value was \"$expression_matrix_ref\")");
         (!ref($genome_ref)) or push(@_bad_arguments, "Invalid type for argument 3 \"genome_ref\" (value was \"$genome_ref\")");
+        (!ref($expression_cutoff)) or push(@_bad_arguments, "Invalid type for argument 4 \"expression_cutoff\" (value was \"$expression_cutoff\")");
+        (!ref($output_atomicRegulons)) or push(@_bad_arguments, "Invalid type for argument 5 \"output_atomicRegulons\" (value was \"$output_atomicRegulons\")");
         if (@_bad_arguments) {
 	    my $msg = "Invalid arguments passed to compute_atomic_regulons:\n" . join("", map { "\t$_\n" } @_bad_arguments);
 	    Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
@@ -266,7 +278,7 @@ sub _validate_version {
 
 
 
-=head2 workspace_name
+=head2 workspace
 
 =over 4
 
@@ -359,6 +371,68 @@ a string
 
 
 
+=head2 expression_cutoff
+
+=over 4
+
+
+
+=item Description
+
+A string for the expression_cutoff
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
+=head2 output_atomicRegulons
+
+=over 4
+
+
+
+=item Description
+
+A string for the output regulon set
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
 =head2 AtomicRegulonSet
 
 =over 4
@@ -373,6 +447,7 @@ a string
 a reference to a hash where the following keys are defined:
 expression_matrix_ref has a value which is a string
 genome_ref has a value which is a string
+expression_cutoff has a value which is a string
 
 </pre>
 
@@ -383,6 +458,7 @@ genome_ref has a value which is a string
 a reference to a hash where the following keys are defined:
 expression_matrix_ref has a value which is a string
 genome_ref has a value which is a string
+expression_cutoff has a value which is a string
 
 
 =end text

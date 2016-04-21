@@ -20,7 +20,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @Generated("com.googlecode.jsonschema2pojo")
 @JsonPropertyOrder({
     "expression_matrix_ref",
-    "genome_ref"
+    "genome_ref",
+    "expression_cutoff"
 })
 public class AtomicRegulonSet {
 
@@ -28,6 +29,8 @@ public class AtomicRegulonSet {
     private String expressionMatrixRef;
     @JsonProperty("genome_ref")
     private String genomeRef;
+    @JsonProperty("expression_cutoff")
+    private String expressionCutoff;
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
     @JsonProperty("expression_matrix_ref")
@@ -60,6 +63,21 @@ public class AtomicRegulonSet {
         return this;
     }
 
+    @JsonProperty("expression_cutoff")
+    public String getExpressionCutoff() {
+        return expressionCutoff;
+    }
+
+    @JsonProperty("expression_cutoff")
+    public void setExpressionCutoff(String expressionCutoff) {
+        this.expressionCutoff = expressionCutoff;
+    }
+
+    public AtomicRegulonSet withExpressionCutoff(String expressionCutoff) {
+        this.expressionCutoff = expressionCutoff;
+        return this;
+    }
+
     @JsonAnyGetter
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
@@ -72,7 +90,7 @@ public class AtomicRegulonSet {
 
     @Override
     public String toString() {
-        return ((((((("AtomicRegulonSet"+" [expressionMatrixRef=")+ expressionMatrixRef)+", genomeRef=")+ genomeRef)+", additionalProperties=")+ additionalProperties)+"]");
+        return ((((((((("AtomicRegulonSet"+" [expressionMatrixRef=")+ expressionMatrixRef)+", genomeRef=")+ genomeRef)+", expressionCutoff=")+ expressionCutoff)+", additionalProperties=")+ additionalProperties)+"]");
     }
 
 }

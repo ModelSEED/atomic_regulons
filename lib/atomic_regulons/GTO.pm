@@ -6,7 +6,7 @@ use BasicLocation;
 use Data::Dumper;
 use strict;
 use warnings;
-#use fr0g;
+
 
 sub write_seed_dir
 {
@@ -86,12 +86,7 @@ sub write_seed_dir
 
     #maded the modification of having the $iptions GenomeID included in the path
     #mkdir("$dir/Features"); #original
-    print "inside GTO\n";
-    #print &Dumper ($g_id);
-    print "dumped\n";
-    #die;     
 
-    #mkdir("$mdir/Features");
     mkdir("$dir/Features");
 
 

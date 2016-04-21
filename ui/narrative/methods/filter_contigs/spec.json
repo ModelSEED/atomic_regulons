@@ -1,76 +1,104 @@
 {
-    "ver": "0.0.1",
+        "ver": "0.0.1",
     "authors": [
         "janakakbase"
     ],
-    "contact": "help@kbase.us",
+    "contact": "janakaed@anl.gov",
+    "visible": true,
     "categories": ["active"],
     "widgets": {
         "input": null,
-        "output": null
+        "output": "view_expression_feature_clusters"
     },
-    "parameters": [ 
+    "parameters": [
         {
-            "id": "contigset_id",
+            "id": "genome_ref",
             "optional": false,
             "advanced": false,
-            "allow_multiple": false,
+            "allow_multiple": true,
             "default_values": [ "" ],
             "field_type": "text",
             "text_options": {
-                "valid_ws_types": [ "KBaseGenomes.ContigSet" ]
+                "valid_ws_types": [ "KBaseGenomes.Genome" ]
             }
         },
         {
-            "id": "min_length",
-            "optional": false,
-            "advanced": false,
-            "allow_multiple": false,
-            "default_values": [ "" ],
-            "field_type": "text",
-            "text_options": {
-                "validate_as": "int",
-                "min_integer" : 0
+            "id" : "expression_matrix_ref",
+            "optional" : false,
+            "advanced" : false,
+            "allow_multiple" : false,
+            "default_values" : [ "" ],
+            "field_type" : "text",
+            "text_options" : {
+            "valid_ws_types" : [ "KBaseFeatureValues.ExpressionMatrix" ],
+            "is_output_name":true
             }
-        }
+         },
+         {
+            "id" : "expression_cutoff",
+            "optional" : true,
+            "advanced" : false,
+            "allow_multiple" : false,
+            "default_values" : [0.7],
+            "field_type" : "text",
+            "text_options" : {
+            "validate_as": "float"
+            }
+         },
+         {
+            "id" : "output_atomicRegulons",
+            "optional" : false,
+            "advanced" : false,
+            "allow_multiple" : false,
+            "default_values" : [ "" ],
+            "field_type" : "text",
+            "text_options" : {
+            "valid_ws_types" : [ "KBaseFeatureValues.FeatureClusters" ],
+            "is_output_name":true
+            }
+         }
     ],
     "behavior": {
         "service-mapping": {
             "url": "",
             "name": "atomic_regulons",
-            "method": "filter_contigs",
+            "method": "compute_atomic_regulons",
             "input_mapping": [
                 {
                     "narrative_system_variable": "workspace",
-                    "target_property": "workspace"
+                    "target_argument_position": "0"
                 },
                 {
-                    "input_parameter": "contigset_id",
-                    "target_property": "contigset_id"
+                    "input_parameter": "genome_ref",
+                    "target_argument_position": "1"
                 },
                 {
-                    "input_parameter": "min_length",
-                    "target_property": "min_length"
+                    "input_parameter": "expression_matrix_ref",
+                    "target_argument_position": "2"
+                },
+                {
+                    "input_parameter": "expression_cutoff",
+                    "target_argument_position": "3"
+                },
+                {
+                    "input_parameter": "output_atomicRegulons",
+                    "target_argument_position": "4"
                 }
             ],
             "output_mapping": [
                 {
-                    "service_method_output_path": [0],
-                    "target_property": "contig_filter_result"
+                  "constant_value": "KBaseFeatureValues.FeatureClusters",
+                  "target_property": "type"
                 },
                 {
-                    "input_parameter": "contigset_id",
-                    "target_property": "input_contigset_id"
+                  "input_parameter": "output_atomicRegulons",
+                  "target_property": "obj"
                 },
                 {
-                    "input_parameter": "min_length",
-                    "target_property": "input_min_length"
-                },
-                {
-                    "narrative_system_variable": "workspace",
-                    "target_property": "workspace_name"
+                  "narrative_system_variable": "workspace",
+                  "target_property": "ws"
                 }
-            ]
+              ]
         }
     },
     "job_id_output_field": "docker"

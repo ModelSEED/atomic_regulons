@@ -66,9 +66,11 @@ eval {
 my $exp = "e.coli";
 my $geno = "kb|g.0";
 my $ws = "jplfaria:1457040939310";
+my $exCut = "0.8";
+my $out = "atomicRegulonOut";
 
 eval {
-my $ret =$impl->compute_atomic_regulons($ws,$exp,$geno);
+my $ret =$impl->compute_atomic_regulons($ws,$exp,$geno, $exCut, $out);
 };
 
 

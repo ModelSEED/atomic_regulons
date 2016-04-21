@@ -143,18 +143,22 @@ public class AtomicRegulonsClient {
      * <p>Original spec-file function name: compute_atomic_regulons</p>
      * <pre>
      * </pre>
-     * @param   arg1   instance of original type "workspace_name" (A string representing the workspace name)
+     * @param   arg1   instance of original type "workspace" (A string representing the workspace name)
      * @param   arg2   instance of original type "expression_matrix_ref" (String represent the Expression Matrix)
      * @param   arg3   instance of original type "genome_ref" (A string for the genome)
+     * @param   arg4   instance of original type "expression_cutoff" (A string for the expression_cutoff)
+     * @param   arg5   instance of original type "output_atomicRegulons" (A string for the output regulon set)
      * @return   instance of type {@link us.kbase.atomicregulons.AtomicRegulonSet AtomicRegulonSet}
      * @throws IOException if an IO exception occurs
      * @throws JsonClientException if a JSON RPC exception occurs
      */
-    public AtomicRegulonSet computeAtomicRegulons(String arg1, String arg2, String arg3, RpcContext... jsonRpcContext) throws IOException, JsonClientException {
+    public AtomicRegulonSet computeAtomicRegulons(String arg1, String arg2, String arg3, String arg4, String arg5, RpcContext... jsonRpcContext) throws IOException, JsonClientException {
         List<Object> args = new ArrayList<Object>();
         args.add(arg1);
         args.add(arg2);
         args.add(arg3);
+        args.add(arg4);
+        args.add(arg5);
         TypeReference<List<AtomicRegulonSet>> retType = new TypeReference<List<AtomicRegulonSet>>() {};
         List<AtomicRegulonSet> res = caller.jsonrpcCall("atomic_regulons.compute_atomic_regulons", args, retType, true, true, jsonRpcContext);
         return res.get(0);

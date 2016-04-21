@@ -7,7 +7,7 @@ module atomic_regulons {
     /*
        A string representing the workspace name
    */
-   typedef string workspace_name;
+   typedef string workspace;
    /*
        String represent the Expression Matrix
    */
@@ -16,13 +16,22 @@ module atomic_regulons {
        A string for the genome
    */
    typedef string genome_ref;
-   
-   
+   /*
+       A string for the expression_cutoff
+   */
+   typedef string expression_cutoff;
+
+   /*
+       A string for the output regulon set
+   */
+   typedef string output_atomicRegulons;
+
    typedef structure {
        string expression_matrix_ref;
        string genome_ref;
+       string expression_cutoff;
    } AtomicRegulonSet;
-   
-   funcdef compute_atomic_regulons(workspace_name, expression_matrix_ref, genome_ref) returns (AtomicRegulonSet) authentication required;
+
+   funcdef compute_atomic_regulons(workspace, genome_ref, expression_matrix_ref, expression_cutoff, output_atomicRegulons) returns (AtomicRegulonSet) authentication required;
 
 };

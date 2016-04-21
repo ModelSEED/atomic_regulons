@@ -27,15 +27,27 @@ suggestions:
 # Configure the display and description of parameters
 #
 parameters :
-    contigset_id :
+    genome_ref :
         ui-name : |
-            Contig Set Name
+            Name of the genome
         short-hint : |
-            The contig set to filter (will be overwritten)
-    min_length :
+            Name of the genome where atomic regulons be computed
+    expression_matrix_ref :
         ui-name : |
-            Min Length Threshold
+            Expression Data Set
         short-hint : |
-            All contigs below this length will be removed
+            Name of the Expression Data Set related to the atomic regulon computation
+    expression_cutoff :
+        ui-name : |
+            Expression threshold
+        short-hint : |
+            Expression threshold value. 0.4 is used by default if left blank
+    output_atomicRegulons :
+        ui-name : |
+            Output name
+        short-hint : |
+            Output name  of data object
+        long-hint  : |
+            Analysis data will be stored in this object.
 description : |
     <p>This is a simple method designed to illustrate the KBase SDK.</p>

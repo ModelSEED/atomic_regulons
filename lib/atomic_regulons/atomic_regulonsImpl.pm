@@ -2,7 +2,7 @@ package atomic_regulons::atomic_regulonsImpl;
 use strict;
 use Bio::KBase::Exceptions;
 # Use Semantic Versioning (2.0.0-rc.1)
-# http://semver.org 
+# http://semver.org
 our $VERSION = "0.1.0";
 
 =head1 NAME
@@ -69,7 +69,7 @@ sub new
 
 =head2 compute_atomic_regulons
 
-  $return = $obj->compute_atomic_regulons($workspace_name, $expression_matrix_ref, $genome_ref)
+  $return = $obj->compute_atomic_regulons($workspace, $expression_matrix_ref, $genome_ref, $expression_cutoff, $output_atomicRegulons)
 
 =over 4
 
@@ -78,16 +78,21 @@ sub new
 =begin html
 
 <pre>
-$workspace_name is an atomic_regulons.workspace_name
+$workspace is an atomic_regulons.workspace
 $expression_matrix_ref is an atomic_regulons.expression_matrix_ref
 $genome_ref is an atomic_regulons.genome_ref
+$expression_cutoff is an atomic_regulons.expression_cutoff
+$output_atomicRegulons is an atomic_regulons.output_atomicRegulons
 $return is an atomic_regulons.AtomicRegulonSet
-workspace_name is a string
+workspace is a string
 expression_matrix_ref is a string
 genome_ref is a string
+expression_cutoff is a string
+output_atomicRegulons is a string
 AtomicRegulonSet is a reference to a hash where the following keys are defined:
 	expression_matrix_ref has a value which is a string
 	genome_ref has a value which is a string
+	expression_cutoff has a value which is a string
 
 </pre>
 
@@ -95,16 +100,21 @@ AtomicRegulonSet is a reference to a hash where the following keys are defined:
 
 =begin text
 
-$workspace_name is an atomic_regulons.workspace_name
+$workspace is an atomic_regulons.workspace
 $expression_matrix_ref is an atomic_regulons.expression_matrix_ref
 $genome_ref is an atomic_regulons.genome_ref
+$expression_cutoff is an atomic_regulons.expression_cutoff
+$output_atomicRegulons is an atomic_regulons.output_atomicRegulons
 $return is an atomic_regulons.AtomicRegulonSet
-workspace_name is a string
+workspace is a string
 expression_matrix_ref is a string
 genome_ref is a string
+expression_cutoff is a string
+output_atomicRegulons is a string
 AtomicRegulonSet is a reference to a hash where the following keys are defined:
 	expression_matrix_ref has a value which is a string
 	genome_ref has a value which is a string
+	expression_cutoff has a value which is a string
 
 
 =end text
@@ -122,12 +132,14 @@ AtomicRegulonSet is a reference to a hash where the following keys are defined:
 sub compute_atomic_regulons
 {
     my $self = shift;
-    my($workspace_name, $expression_matrix_ref, $genome_ref) = @_;
+    my($workspace, $expression_matrix_ref, $genome_ref, $expression_cutoff, $output_atomicRegulons) = @_;
 
     my @_bad_arguments;
-    (!ref($workspace_name)) or push(@_bad_arguments, "Invalid type for argument \"workspace_name\" (value was \"$workspace_name\")");
+    (!ref($workspace)) or push(@_bad_arguments, "Invalid type for argument \"workspace\" (value was \"$workspace\")");
     (!ref($expression_matrix_ref)) or push(@_bad_arguments, "Invalid type for argument \"expression_matrix_ref\" (value was \"$expression_matrix_ref\")");
     (!ref($genome_ref)) or push(@_bad_arguments, "Invalid type for argument \"genome_ref\" (value was \"$genome_ref\")");
+    (!ref($expression_cutoff)) or push(@_bad_arguments, "Invalid type for argument \"expression_cutoff\" (value was \"$expression_cutoff\")");
+    (!ref($output_atomicRegulons)) or push(@_bad_arguments, "Invalid type for argument \"output_atomicRegulons\" (value was \"$output_atomicRegulons\")");
     if (@_bad_arguments) {
 	my $msg = "Invalid arguments passed to compute_atomic_regulons:\n" . join("", map { "\t$_\n" } @_bad_arguments);
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
@@ -139,17 +151,61 @@ sub compute_atomic_regulons
     #BEGIN compute_atomic_regulons
     my $token=$ctx->token;
     my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
-    my $wsid = "5935";
-    my $gto=$wshandle->get_objects([{wsid=>$wsid, name=>$genome_ref}]);
-    my $expdata=$wshandle->get_objects([{wsid=>$wsid,name=>$expression_matrix_ref}]);
-    #my $em=$wshandle->get_objects([{workspace=>$workspace_name,name=>$expression_matrix_ref}]);
-    #my $gto = GenomeTypeObject->create_from_file($gtoFile);
+    my $gto=$wshandle->get_objects([{workspace=>$workspace, name=>$genome_ref}]);
+    my $em=$wshandle->get_objects([{workspace=>$workspace,name=>$expression_matrix_ref}]);
     my $expDir = "/kb/module/work/tmp/arwork";
+    my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
-    print join ("\n",@INC,"");
 
-    #print &Dumper ($em);
-    #die;
+    my $preData = {
+        original_data => $exRef,
+        feature_clusters => []
+    };
+
+
+    my $atomic_pegs = {
+
+        msec => 0,
+        meanco => 0,
+        id_to_pos => {}
+    };
+
+
+     #$preData->{original_data} = "5711/2/1";
+
+
+
+
+    my $emx = $em->[0]->{data}->{data};
+    my $rows = $emx->{row_ids};
+    my $cols = $emx->{col_ids};
+    my $ex_vals = $emx->{values};
+
+    #my $exp = "../data/rma_normalized1.tab";
+    my $expex = "/kb/module/work/tmp/arwork";
+
+    open(my $emt, ">$expex/$expression_matrix_ref") || die "Could not write subsystem bindings: $!";
+
+    for (my $i =0; $i<@$cols; $i++){
+
+        print $emt "$cols->[$i]\t";
+    }
+    print $emt "\n";
+
+    for (my $i =0; $i< @$rows; $i++){
+
+        print $emt "$rows->[$i]\t";
+        my $val_set= $ex_vals->[$i];
+        for (my $j=0; $j< @$val_set; $j++){
+
+            print $emt "$val_set->[$j]\t";
+        }
+        print $emt "\n";
+
+    }
+
+    close $emt;
+
 
     my $genomeID = $gto->[0]->{data}->{source_id};
     print "$genomeID\n\n";
@@ -159,8 +215,10 @@ sub compute_atomic_regulons
     close $oh;
     #File::Copy::Recursive::pathmk("$expDir/$genomeID");
     #print &Dumper ($expdata);
-    my $exp = "../data/rma_normalized.tab";
 
+    #print &Dumper ($exp);
+    #die;
+    my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
     File::Copy::Recursive::fcopy($exp, "$expDir/rma_normalized.tab") or die "copy failed $!";
     #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
     print "its here now\n";
@@ -197,9 +255,45 @@ sub compute_atomic_regulons
 
     $e->compute_atomic_regulons();
 
-    
-    die;
 
+    my $reg_set;
+    my $count =1;
+    open INFILE, "$expDir/atomic.regulons" or die "Couldn't open atomic_regulons file : $!";
+    while (my $input = <INFILE>){
+        chomp $input;
+        my @arr = split /\t/, $input;
+
+        if ($arr[0] == $count){
+            my $numReg = $arr[0]+0;
+            $reg_set->{$arr[1]."_".$arr[2]} = $numReg;
+
+        }
+        else{
+            $atomic_pegs->{id_to_pos} = $reg_set;
+            push ($preData->{feature_clusters}, $atomic_pegs);
+            $count++;
+            $reg_set = {};
+            $atomic_pegs = {
+
+                msec => 0,
+                meancor => 0,
+                id_to_pos => {}
+            };
+
+
+        }
+    }
+
+    my $saveObjectParams;
+    $saveObjectParams->{workspace}=$workspace;
+    $saveObjectParams->{objects}->[0]->{type} = "KBaseFeatureValues.FeatureClusters";
+    $saveObjectParams->{objects}->[0]->{data} = $preData;
+    $saveObjectParams->{objects}->[0]->{name} = $output_atomicRegulons;
+    my $meta = $wshandle->save_objects($saveObjectParams);
+    $return = {'atomic_regulons' => $meta};
+
+    #print &Dumper ($saveObjectParams);
+    #die;
 
     #END compute_atomic_regulons
     my @_bad_returns;
@@ -215,7 +309,7 @@ sub compute_atomic_regulons
 
 
 
-=head2 version 
+=head2 version
 
   $return = $obj->version()
 
@@ -253,7 +347,7 @@ sub version {
 
 
 
-=head2 workspace_name
+=head2 workspace
 
 =over 4
 
@@ -346,6 +440,68 @@ a string
 
 
 
+=head2 expression_cutoff
+
+=over 4
+
+
+
+=item Description
+
+A string for the expression_cutoff
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
+=head2 output_atomicRegulons
+
+=over 4
+
+
+
+=item Description
+
+A string for the output regulon set
+
+
+=item Definition
+
+=begin html
+
+<pre>
+a string
+</pre>
+
+=end html
+
+=begin text
+
+a string
+
+=end text
+
+=back
+
+
+
 =head2 AtomicRegulonSet
 
 =over 4
@@ -360,6 +516,7 @@ a string
 a reference to a hash where the following keys are defined:
 expression_matrix_ref has a value which is a string
 genome_ref has a value which is a string
+expression_cutoff has a value which is a string
 
 </pre>
 
@@ -370,6 +527,7 @@ genome_ref has a value which is a string
 a reference to a hash where the following keys are defined:
 expression_matrix_ref has a value which is a string
 genome_ref has a value which is a string
+expression_cutoff has a value which is a string
 
 
 =end text

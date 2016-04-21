@@ -18,11 +18,9 @@ my($genome,$probe_occF,$probe_pegF,$raw_dataF, $expr_dir, $output_probesF, $outp
     || die $usage;
 
 my $exprO = ExpressionDir->new($expr_dir);
-print "here line 21\n";
+
 
 $genome = $exprO->genome_id;
-
-print "in the get ON probes code   genome $genome\n";
 
 $probe_occF = $exprO->expr_dir . "/probe.occ.table";
 $probe_pegF = $exprO->expr_dir . "/peg.probe.table";
@@ -37,8 +35,6 @@ my %known_pegs = map { ($_ =~ /^(fig\|\d+\.\d+\.[^\.]+\.\d+)/) ? ($1 => 1) : () 
 my @pegs = $exprO->all_features('peg');
 
 my $hashF = $exprO->ids_to_functions(\@pegs);
-print &Dumper ($hashF);
-#die;
 
 my %ONfunc = map { chomp; $_ => 1 } <DATA>;
 my %ON     = map { $ONfunc{$hashF->{$_}} ? ($_ => $hashF->{$_}) : () } keys(%$hashF);
@@ -63,7 +59,6 @@ else
 
 my @keep;
 
-print "here line 60 in get on Probes\n";
 
 my %pegs;
 if (open(PP, "<", $probe_pegF))
