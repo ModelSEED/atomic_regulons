@@ -8,7 +8,7 @@ if [ -d "SEEDtk" ]; then
     ./seedtk-setup
     source user-env.sh
     mkdir Data
-    perl Config.pl --dirs --dna=none --dbhost=branch.mcs.anl.gov --dbpass=when26crazy --dbuser=seedtk --dbname=seedtk_shrub --kbase=../lib/FIG_Config.pm Data
+    perl Config.pl --dirs --dna=none --dbhost=db3.chicago.kbase.us --dbpass=when26crazy --dbuser=seedtk --dbname=seedtk_shrub --kbase=../lib/FIG_Config.pm Data
     cd Data/Global
-    
+
 fi

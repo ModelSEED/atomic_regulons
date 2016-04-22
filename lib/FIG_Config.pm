@@ -83,8 +83,8 @@ package FIG_Config;
     our $default_mysql_engine = "InnoDB";
 
     # database host server (empty string to use the default)
-    #our $dbhost = "db3.chicago.kbase.us";
-    our $dbhost = "branch.mcs.anl.gov";
+    our $dbhost = "db3.chicago.kbase.us";
+    #our $dbhost = "branch.mcs.anl.gov";
 
     # TRUE to turn off size estimates during table creation--
     # should be FALSE for MyISAM
