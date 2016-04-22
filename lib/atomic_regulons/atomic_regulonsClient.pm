@@ -112,7 +112,7 @@ sub new
 
 =head2 compute_atomic_regulons
 
-  $return = $obj->compute_atomic_regulons($workspace, $expression_matrix_ref, $genome_ref, $expression_cutoff, $output_atomicRegulons)
+  $return = $obj->compute_atomic_regulons($workspace_name, $genome_ref, $expression_matrix_ref, $expression_cutoff, $output_atomicRegulons)
 
 =over 4
 
@@ -121,15 +121,15 @@ sub new
 =begin html
 
 <pre>
-$workspace is an atomic_regulons.workspace
-$expression_matrix_ref is an atomic_regulons.expression_matrix_ref
+$workspace_name is an atomic_regulons.workspace_name
 $genome_ref is an atomic_regulons.genome_ref
+$expression_matrix_ref is an atomic_regulons.expression_matrix_ref
 $expression_cutoff is an atomic_regulons.expression_cutoff
 $output_atomicRegulons is an atomic_regulons.output_atomicRegulons
 $return is an atomic_regulons.AtomicRegulonSet
-workspace is a string
-expression_matrix_ref is a string
+workspace_name is a string
 genome_ref is a string
+expression_matrix_ref is a string
 expression_cutoff is a string
 output_atomicRegulons is a string
 AtomicRegulonSet is a reference to a hash where the following keys are defined:
@@ -143,15 +143,15 @@ AtomicRegulonSet is a reference to a hash where the following keys are defined:
 
 =begin text
 
-$workspace is an atomic_regulons.workspace
-$expression_matrix_ref is an atomic_regulons.expression_matrix_ref
+$workspace_name is an atomic_regulons.workspace_name
 $genome_ref is an atomic_regulons.genome_ref
+$expression_matrix_ref is an atomic_regulons.expression_matrix_ref
 $expression_cutoff is an atomic_regulons.expression_cutoff
 $output_atomicRegulons is an atomic_regulons.output_atomicRegulons
 $return is an atomic_regulons.AtomicRegulonSet
-workspace is a string
-expression_matrix_ref is a string
+workspace_name is a string
 genome_ref is a string
+expression_matrix_ref is a string
 expression_cutoff is a string
 output_atomicRegulons is a string
 AtomicRegulonSet is a reference to a hash where the following keys are defined:
@@ -182,12 +182,12 @@ AtomicRegulonSet is a reference to a hash where the following keys are defined:
 							       "Invalid argument count for function compute_atomic_regulons (received $n, expecting 5)");
     }
     {
-	my($workspace, $expression_matrix_ref, $genome_ref, $expression_cutoff, $output_atomicRegulons) = @args;
+	my($workspace_name, $genome_ref, $expression_matrix_ref, $expression_cutoff, $output_atomicRegulons) = @args;
 
 	my @_bad_arguments;
-        (!ref($workspace)) or push(@_bad_arguments, "Invalid type for argument 1 \"workspace\" (value was \"$workspace\")");
-        (!ref($expression_matrix_ref)) or push(@_bad_arguments, "Invalid type for argument 2 \"expression_matrix_ref\" (value was \"$expression_matrix_ref\")");
-        (!ref($genome_ref)) or push(@_bad_arguments, "Invalid type for argument 3 \"genome_ref\" (value was \"$genome_ref\")");
+        (!ref($workspace_name)) or push(@_bad_arguments, "Invalid type for argument 1 \"workspace_name\" (value was \"$workspace_name\")");
+        (!ref($genome_ref)) or push(@_bad_arguments, "Invalid type for argument 2 \"genome_ref\" (value was \"$genome_ref\")");
+        (!ref($expression_matrix_ref)) or push(@_bad_arguments, "Invalid type for argument 3 \"expression_matrix_ref\" (value was \"$expression_matrix_ref\")");
         (!ref($expression_cutoff)) or push(@_bad_arguments, "Invalid type for argument 4 \"expression_cutoff\" (value was \"$expression_cutoff\")");
         (!ref($output_atomicRegulons)) or push(@_bad_arguments, "Invalid type for argument 5 \"output_atomicRegulons\" (value was \"$output_atomicRegulons\")");
         if (@_bad_arguments) {
@@ -278,7 +278,7 @@ sub _validate_version {
 
 
 
-=head2 workspace
+=head2 workspace_name
 
 =over 4
 

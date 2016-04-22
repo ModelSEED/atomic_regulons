@@ -171,10 +171,10 @@ class atomic_regulons(object):
             raise ServerError('Unknown', 0, 'An unknown server error occurred')
         return resp['result']
  
-    def compute_atomic_regulons(self, workspace, expression_matrix_ref, genome_ref, expression_cutoff, output_atomicRegulons, json_rpc_context = None):
+    def compute_atomic_regulons(self, workspace_name, genome_ref, expression_matrix_ref, expression_cutoff, output_atomicRegulons, json_rpc_context = None):
         if json_rpc_context and type(json_rpc_context) is not dict:
             raise ValueError('Method compute_atomic_regulons: argument json_rpc_context is not type dict as required.')
         resp = self._call('atomic_regulons.compute_atomic_regulons',
-                          [workspace, expression_matrix_ref, genome_ref, expression_cutoff, output_atomicRegulons], json_rpc_context)
+                          [workspace_name, genome_ref, expression_matrix_ref, expression_cutoff, output_atomicRegulons], json_rpc_context)
         return resp[0]
  

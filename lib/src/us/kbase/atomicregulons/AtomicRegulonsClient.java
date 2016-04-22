@@ -143,9 +143,9 @@ public class AtomicRegulonsClient {
      * <p>Original spec-file function name: compute_atomic_regulons</p>
      * <pre>
      * </pre>
-     * @param   arg1   instance of original type "workspace" (A string representing the workspace name)
-     * @param   arg2   instance of original type "expression_matrix_ref" (String represent the Expression Matrix)
-     * @param   arg3   instance of original type "genome_ref" (A string for the genome)
+     * @param   arg1   instance of original type "workspace_name" (A string representing the workspace name)
+     * @param   arg2   instance of original type "genome_ref" (A string for the genome)
+     * @param   arg3   instance of original type "expression_matrix_ref" (String represent the Expression Matrix)
      * @param   arg4   instance of original type "expression_cutoff" (A string for the expression_cutoff)
      * @param   arg5   instance of original type "output_atomicRegulons" (A string for the output regulon set)
      * @return   instance of type {@link us.kbase.atomicregulons.AtomicRegulonSet AtomicRegulonSet}
