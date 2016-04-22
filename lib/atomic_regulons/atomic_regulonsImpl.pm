@@ -191,7 +191,7 @@ sub compute_atomic_regulons
 
     for (my $i =0; $i< @$rows; $i++){
 
-        print $emt "$rows->[$i]\t";
+        print OUTFILE "$rows->[$i]\t";
         my $val_set= $ex_vals->[$i];
         for (my $j=0; $j< @$val_set; $j++){
 
