@@ -12,7 +12,7 @@ atomic_regulons
 =head1 DESCRIPTION
 
 A KBase module: atomic_regulons
-This sample module contains one small method - filter_contigs.
+This sample module contains one small method - atomic_regulons.
 
 =cut
 
