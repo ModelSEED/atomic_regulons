@@ -134,7 +134,7 @@ sub write_seed_dir
 
         my $function = $feature->{function} || "hypothetical protein";
 
-         print "function $function\n";
+        #print "function $function\n";
         print $func_fh "$fid\t$function\n";
 
         my $loc = $feature->{location};

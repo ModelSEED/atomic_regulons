@@ -142,12 +142,11 @@ sub make_missing_probes
 
 sub compute_atomic_regulons
 {
-    print "I am here ExpressionDir\n";
-
-
     my($self, $pearson_cutoff) = @_;
 
-    $pearson_cutoff ||= 0.7;
+    print "pearson correlation coefficient used is $pearson_cutoff\n";
+
+    #$pearson_cutoff ||= 0.7;
 
     my $coreg_clusters = catfile($self->expr_dir, "coregulated.clusters");
     my $coreg_subsys = catfile($self->expr_dir, "coregulated.subsys");
@@ -155,7 +154,6 @@ sub compute_atomic_regulons
     my $probes_always_on = catfile($self->expr_dir, "probes.always.on");
     my $pegs_always_on = catfile($self->expr_dir, "pegs.always.on");
 
-    print &Dumper ($self);
 
 
     $self->run(["/kb/module/lib/atomic_regulons/call_coregulated_clusters_on_chromosome", $self->expr_dir],
@@ -340,8 +338,8 @@ sub ids_to_subsystems
 sub ids_to_functions
 {
     my($self, $ids) = @_;
-    print &Dumper ($self);
-    print &Dumper ($self->expr_dir);
+    #print &Dumper ($self);
+    #print &Dumper ($self->expr_dir);
 
     #open(AF, "<", catfile($self->expr_dir, "assigned_functions"));
     open(AF, "<", catfile($self->genome_dir, "assigned_functions")); # original line

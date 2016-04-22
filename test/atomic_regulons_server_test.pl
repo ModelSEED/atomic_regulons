@@ -19,58 +19,15 @@ my $ctx = LocalCallContext->new($token, $auth_token->user_id);
 $atomic_regulons::atomic_regulonsServer::CallContext = $ctx;
 my $impl = new atomic_regulons::atomic_regulonsImpl();
 
-=head
-sub get_ws_name {
-    if (!defined($ws_name)) {
-        my $suffix = int(time * 1000);
-        $ws_name = 'test_atomic_regulons_' . $suffix;
-        $ws_client->create_workspace({workspace => $ws_name});
-    }
-    return $ws_name;
-}
-
-eval {
-    my $obj_name = "contigset.1";
-    my $contig1 = {id => '1', length => 10, md5 => 'md5', sequence => 'agcttttcat'};
-    my $contig2 = {id => '2', length => 5, md5 => 'md5', sequence => 'agctt'};
-    my $contig3 = {id => '3', length => 12, md5 => 'md5', sequence => 'agcttttcatgg'};
-    my $obj = {contigs => [$contig1,$contig2,$contig3], id => 'id', md5 => 'md5',
-            name => 'name', source => 'source', source_id => 'source_id', type => 'type'};
-    $ws_client->save_objects({workspace => get_ws_name(), objects =>
-            [{type => 'KBaseGenomes.ContigSet', name => $obj_name, data => $obj}]});
-    my $ret = $impl->filter_contigs({workspace=>get_ws_name(), contigset_id=>$obj_name,
-            min_length=>"10"});
-    ok($ret->{n_initial_contigs} eq 3, "number of initial contigs");
-    ok($ret->{n_contigs_removed} eq 1, "number of removed contigs");
-    ok($ret->{n_contigs_remaining} eq 2, "number of remaining contigs");
-    $@ = '';
-    eval {
-        $impl->filter_contigs({workspace=>get_ws_name(), contigset_id=>"fake",
-                min_length=>10});
-    };
-    like($@, qr/Error loading original ContigSet object/);
-    eval {
-        $impl->filter_contigs({workspace=>get_ws_name(), contigset_id=>"fake",
-                min_length=>"-10"});
-    };
-    like($@, qr/min_length parameter shouldn\'t be negative/);
-    eval {
-        $impl->filter_contigs({workspace=>get_ws_name(), contigset_id=>"fake"});
-    };
-    like($@, qr/Parameter min_length is not set in input arguments/);
-    done_testing(6);
-};
-
-=cut
 
 my $exp = "e.coli";
 my $geno = "kb|g.0";
 my $ws = "jplfaria:1457040939310";
-my $exCut = "0.8";
+my $exCut = "0.7";
 my $out = "atomicRegulonOut";
 
 eval {
-my $ret =$impl->compute_atomic_regulons($ws,$exp,$geno, $exCut, $out);
+my $ret =$impl->compute_atomic_regulons($ws,$geno, $exp,$exCut, $out);
 };
 
 
