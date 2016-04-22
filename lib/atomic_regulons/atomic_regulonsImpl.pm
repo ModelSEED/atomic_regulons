@@ -2,7 +2,7 @@ package atomic_regulons::atomic_regulonsImpl;
 use strict;
 use Bio::KBase::Exceptions;
 # Use Semantic Versioning (2.0.0-rc.1)
-# http://semver.org 
+# http://semver.org
 our $VERSION = "0.1.0";
 
 =head1 NAME
@@ -153,11 +153,20 @@ sub compute_atomic_regulons
     my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
     my $gto=$wshandle->get_objects([{workspace=>$workspace_name, name=>$genome_ref}]);
     my $em=$wshandle->get_objects([{workspace=>$workspace_name ,name=>$expression_matrix_ref}]);
-
+    my $tmpDir = "/kb/module/work/tmp";
     my $expDir = "/kb/module/work/tmp/arwork";
-    unless(mkdir $expDir) {
-        die "Unable to create $expDir\n";
+
+    if (-d $tmpDir){
+
+        print "temp directory existists, continuing..\n";
     }
+    else{
+
+        system (mkdir $tmpDir);
+        system (mkdir $expDir);
+        print "creating a temp direcotory for data processing, continuing..\n";
+    }
+
     #my $expDir = "/kb/module/work/tmp";
     my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
@@ -218,8 +227,8 @@ sub compute_atomic_regulons
     #print &Dumper ($exp);
     #die;
 
-    #my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
-    my $exp = "/kb/module/data/$expression_matrix_ref";
+    my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
+    #my $exp = "/kb/module/data/$expression_matrix_ref";
 
     File::Copy::Recursive::fcopy($exp, "$expDir/rma_normalized.tab") or die "copy failed $!";
     #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
@@ -312,7 +321,7 @@ sub compute_atomic_regulons
 
 
 
-=head2 version 
+=head2 version
 
   $return = $obj->version()
 
