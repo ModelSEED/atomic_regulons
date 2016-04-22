@@ -153,8 +153,8 @@ sub compute_atomic_regulons
     my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
     my $gto=$wshandle->get_objects([{workspace=>$workspace_name, name=>$genome_ref}]);
     my $em=$wshandle->get_objects([{workspace=>$workspace_name ,name=>$expression_matrix_ref}]);
-    #my $expDir = "/kb/module/work/tmp/arwork";
-    my $expDir = "/kb/module/work/tmp";
+    my $expDir = "/kb/module/work/tmp/arwork";
+    #my $expDir = "/kb/module/work/tmp";
     my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
 
@@ -177,16 +177,17 @@ sub compute_atomic_regulons
     my $cols = $emx->{col_ids};
     my $ex_vals = $emx->{values};
 
-    #my $expex = "/kb/module/work/tmp/arwork";
-    my $expex = "/kb/module/work/tmp";
+    my $expex = "/kb/module/work/tmp/arwork";
+    #my $expex = "/kb/module/work/tmp";
+    open OUTFILE, ">$expex/$expression_matrix_ref" or die "Couldn't write the expression file : $!";
 
-    open(my $emt, ">$expex/$expression_matrix_ref") || die "Could not write the expression file: $!";
+    #open(my $emt, ">$expex/$expression_matrix_ref") || die "Could not write the expression file: $!";
 
     for (my $i =0; $i<@$cols; $i++){
 
-        print $emt "$cols->[$i]\t";
+        print OUTFILE "$cols->[$i]\t";
     }
-    print $emt "\n";
+    print OUTFILE "\n";
 
     for (my $i =0; $i< @$rows; $i++){
 
@@ -194,13 +195,13 @@ sub compute_atomic_regulons
         my $val_set= $ex_vals->[$i];
         for (my $j=0; $j< @$val_set; $j++){
 
-            print $emt "$val_set->[$j]\t";
+            print OUTFILE "$val_set->[$j]\t";
         }
-        print $emt "\n";
+        print OUTFILE "\n";
 
     }
 
-    close $emt;
+    close OUTFILE;
 
 
     my $genomeID = $gto->[0]->{data}->{source_id};
