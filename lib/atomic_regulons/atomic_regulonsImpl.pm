@@ -151,8 +151,8 @@ sub compute_atomic_regulons
     #BEGIN compute_atomic_regulons
     my $token=$ctx->token;
     my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
-    my $gto=$wshandle->get_objects([{workspace=>$workspace, name=>$genome_ref}]);
-    my $em=$wshandle->get_objects([{workspace=>$workspace,name=>$expression_matrix_ref}]);
+    my $gto=$wshandle->get_objects([{workspace=>$workspace_name, name=>$genome_ref}]);
+    my $em=$wshandle->get_objects([{workspace=>$workspace_name ,name=>$expression_matrix_ref}]);
     my $expDir = "/kb/module/work/tmp/arwork";
     my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
@@ -280,7 +280,7 @@ sub compute_atomic_regulons
     close INFILE;
 
     my $saveObjectParams;
-    $saveObjectParams->{workspace}=$workspace;
+    $saveObjectParams->{workspace}=$workspace_name;
     $saveObjectParams->{objects}->[0]->{type} = "KBaseFeatureValues.FeatureClusters";
     $saveObjectParams->{objects}->[0]->{data} = $preData;
     $saveObjectParams->{objects}->[0]->{name} = $output_atomicRegulons;

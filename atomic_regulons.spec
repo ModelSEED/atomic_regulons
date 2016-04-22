@@ -1,6 +1,5 @@
 /*
 A KBase module: atomic_regulons
-This sample module contains one small method - filter_contigs.
 */
 
 module atomic_regulons {
