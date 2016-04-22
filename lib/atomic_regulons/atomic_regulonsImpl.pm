@@ -153,7 +153,8 @@ sub compute_atomic_regulons
     my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
     my $gto=$wshandle->get_objects([{workspace=>$workspace_name, name=>$genome_ref}]);
     my $em=$wshandle->get_objects([{workspace=>$workspace_name ,name=>$expression_matrix_ref}]);
-    my $expDir = "/kb/module/work/tmp/arwork";
+    #my $expDir = "/kb/module/work/tmp/arwork";
+    my $expDir = "/kb/module/work/tmp";
     my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
 
@@ -176,8 +177,8 @@ sub compute_atomic_regulons
     my $cols = $emx->{col_ids};
     my $ex_vals = $emx->{values};
 
-    #my $exp = "../data/rma_normalized1.tab";
-    my $expex = "/kb/module/work/tmp/arwork";
+    #my $expex = "/kb/module/work/tmp/arwork";
+    my $expex = "/kb/module/work/tmp";
 
     open(my $emt, ">$expex/$expression_matrix_ref") || die "Could not write the expression file: $!";
 
