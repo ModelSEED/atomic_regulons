@@ -8,7 +8,7 @@
     "categories": ["active"],
     "widgets": {
         "input": null,
-        "output": "view_expression_feature_clusters"
+        "output": "kbaseReportView"
     },
     "parameters": [
         {
