@@ -1,7 +1,7 @@
 #
 # define display information
 #
-name: Filter Contigs
+name: Compute Atomic Regulons
 tooltip: |
     Filters the contigs by removing contigs below a length threshold
 screenshots: []
