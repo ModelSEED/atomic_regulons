@@ -153,7 +153,11 @@ sub compute_atomic_regulons
     my $wshandle=Bio::KBase::workspace::Client->new($self->{'workspace-url'},token=>$token);
     my $gto=$wshandle->get_objects([{workspace=>$workspace_name, name=>$genome_ref}]);
     my $em=$wshandle->get_objects([{workspace=>$workspace_name ,name=>$expression_matrix_ref}]);
+
     my $expDir = "/kb/module/work/tmp/arwork";
+    unless(mkdir $expDir) {
+        die "Unable to create $expDir\n";
+    }
     #my $expDir = "/kb/module/work/tmp";
     my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
@@ -178,7 +182,7 @@ sub compute_atomic_regulons
     my $ex_vals = $emx->{values};
 
     my $expex = "/kb/module/work/tmp/arwork";
-    #my $expex = "/kb/module/work/tmp";
+    #my $expex = "/kb/module/data/";
     open OUTFILE, ">$expex/$expression_matrix_ref" or die "Couldn't write the expression file : $!";
 
     #open(my $emt, ">$expex/$expression_matrix_ref") || die "Could not write the expression file: $!";
@@ -190,7 +194,6 @@ sub compute_atomic_regulons
     print OUTFILE "\n";
 
     for (my $i =0; $i< @$rows; $i++){
-
         print OUTFILE "$rows->[$i]\t";
         my $val_set= $ex_vals->[$i];
         for (my $j=0; $j< @$val_set; $j++){
@@ -198,7 +201,6 @@ sub compute_atomic_regulons
             print OUTFILE "$val_set->[$j]\t";
         }
         print OUTFILE "\n";
-
     }
 
     close OUTFILE;
@@ -215,7 +217,10 @@ sub compute_atomic_regulons
 
     #print &Dumper ($exp);
     #die;
-    my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
+
+    #my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
+    my $exp = "/kb/module/data/$expression_matrix_ref";
+
     File::Copy::Recursive::fcopy($exp, "$expDir/rma_normalized.tab") or die "copy failed $!";
     #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
     #added genomeID as an option
