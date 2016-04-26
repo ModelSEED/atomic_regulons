@@ -33,6 +33,7 @@ use Data::Dumper;
 
 use strict;
 use File::Copy::Recursive;
+use File::Path;
 use gjoseqlib;
 use BasicLocation;
 ########
@@ -158,16 +159,15 @@ sub compute_atomic_regulons
 
     if (-d $tmpDir){
 
-        print "temp directory existists, continuing..\n";
+        print "temp directory exists, continuing..\n";
     }
     else{
 
-        system (mkdir $tmpDir);
-        system (mkdir $expDir);
+        mkpath([$tmpDir], 1);
+        mkpath([$expDir], 1);
         print "creating a temp direcotory for data processing, continuing..\n";
     }
 
-    #my $expDir = "/kb/module/work/tmp";
     my $exRef = $em->[0]->{info}->[6]."/".$em->[0]->{info}->[0]."/".$em->[0]->{info}->[4];
 
 
@@ -191,27 +191,19 @@ sub compute_atomic_regulons
     my $ex_vals = $emx->{values};
 
     my $expex = "/kb/module/work/tmp/arwork";
-    #my $expex = "/kb/module/data/";
     open OUTFILE, ">$expex/$expression_matrix_ref" or die "Couldn't write the expression file : $!";
-
-    #open(my $emt, ">$expex/$expression_matrix_ref") || die "Could not write the expression file: $!";
-
     for (my $i =0; $i<@$cols; $i++){
-
         print OUTFILE "$cols->[$i]\t";
     }
     print OUTFILE "\n";
-
     for (my $i =0; $i< @$rows; $i++){
         print OUTFILE "$rows->[$i]\t";
         my $val_set= $ex_vals->[$i];
         for (my $j=0; $j< @$val_set; $j++){
-
             print OUTFILE "$val_set->[$j]\t";
         }
         print OUTFILE "\n";
     }
-
     close OUTFILE;
 
 
@@ -221,32 +213,15 @@ sub compute_atomic_regulons
     open(my $oh, ">$expDir/GENOME_ID") || die "Could not write genome ID: $!";
     print $oh $genomeID;
     close $oh;
-    #File::Copy::Recursive::pathmk("$expDir/$genomeID");
-    #print &Dumper ($expdata);
-
-    #print &Dumper ($exp);
-    #die;
-
     my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
-    #my $exp = "/kb/module/data/$expression_matrix_ref";
-
     File::Copy::Recursive::fcopy($exp, "$expDir/rma_normalized.tab") or die "copy failed $!";
-    #GenomeTypeObject::write_seed_dir("$expDir/$genomeID");
-    #added genomeID as an option
     atomic_regulons::GTO::write_seed_dir ($gto->[0],"$expDir/$genomeID");
-
-    #atomic_regulons::GenomeTO::write_seed_dir();
-    # Write the subsystems.
-    #simplesr ();
-    #seed_dir($gto->[0],$expDir);
 
     File::Copy::Recursive::pathmk("$expDir/$genomeID/Subsystems");
     open(my $bh, ">$expDir/$genomeID/Subsystems/bindings") || die "Could not write subsystem bindings: $!";
     open(my $sh, ">$expDir/$genomeID/Subsystems/subsystems") || die "Could not write subsystem listing: $!";
     my $shrub = Shrub->new();
     my $subH = Shrub::Subsystems::ProjectForGto ($shrub, $gto->[0]);
-
-    #print &Dumper ($subH);
 
     for my $sub (keys %$subH) {
 	   my $subRow = $subH->{$sub};
@@ -264,7 +239,6 @@ sub compute_atomic_regulons
     my $e = ExpressionDir->new($expDir);
 
     $e->compute_atomic_regulons($expression_cutoff);
-
 
     my $reg_set;
     my $count =1;
@@ -303,10 +277,6 @@ sub compute_atomic_regulons
     my $meta = $wshandle->save_objects($saveObjectParams);
 
     $return = {'atomic_regulons' => $meta};
-
-    #print &Dumper ($saveObjectParams);
-    #die;
-
     #END compute_atomic_regulons
     my @_bad_returns;
     (ref($return) eq 'HASH') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
