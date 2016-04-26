@@ -3,7 +3,7 @@
 #
 name: Compute Atomic Regulons
 tooltip: |
-    Filters the contigs by removing contigs below a length threshold
+    Compute atomic regulons for a given SEED/RAST annotated genome with a comparable expression data set
 screenshots: []
 
 icon: icon.png
@@ -29,25 +29,25 @@ suggestions:
 parameters :
     genome_ref :
         ui-name : |
-            Name of the genome
+            Name of the Genome
         short-hint : |
             Name of the genome where atomic regulons be computed
     expression_matrix_ref :
         ui-name : |
             Expression Data Set
         short-hint : |
-            Name of the Expression Data Set related to the atomic regulon computation
+            Name of the expression data set related to the input genome
     expression_cutoff :
         ui-name : |
-            Expression threshold
+            Expression Threshold
         short-hint : |
-            Expression threshold value. 0.4 is used by default if left blank
+            Expression threshold value. 0.7 is used by default, if left blank
     output_atomicRegulons :
         ui-name : |
-            Output name
+            Name of the resulting data object
         short-hint : |
-            Output name  of data object
+            Name of the resulting data object
         long-hint  : |
             Analysis data will be stored in this object.
 description : |
-    <p>This is a simple method designed to illustrate the KBase SDK.</p>
+    <p>This method computes atomic regulon data sets for a given genome and a related expression data set.</p>
