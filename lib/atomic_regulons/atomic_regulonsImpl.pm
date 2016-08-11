@@ -157,7 +157,7 @@ sub compute_atomic_regulons
     my $tmpDir = "/kb/module/work/tmp";
     my $expDir = "/kb/module/work/tmp/arwork";
 
-    if (-d $tmpDir){
+    if (-d $expDir){
 
         print "temp directory exists, continuing..\n";
     }
