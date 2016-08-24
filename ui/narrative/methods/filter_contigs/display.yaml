@@ -3,7 +3,7 @@
 #
 name: Compute Atomic Regulons
 tooltip: |
-    Compute atomic regulons for a given SEED/RAST annotated genome with a comparable expression data set
+    Compute atomic regulons for a given annotated genome with a comparable expression data set
 screenshots: []
 
 icon: icon.png
@@ -50,4 +50,72 @@ parameters :
         long-hint  : |
             Analysis data will be stored in this object.
 description : |
-    <p>This method computes atomic regulon data sets for a given genome and a related expression data set.</p>
+    <p><b>Algorithm for computing atomic regulons</b></p>
+
+    <p>Our atomic regulon inference algorithm [1] is unique from other approaches in that it begins by constructing draft atomic regulons (gene sets) using a combination of operon predictions and SEED subsystem technology [2]. A subsystem is a set of related functional roles that represents the group of proteins involved in a biological process or pathway (e.g., protein biosynthesis or TCA cycle). In contrast to purely data-driven approaches, which start by forming gene clusters based only on available expression data, our approach applies expression data after initial gene clusters are formed in order to either extend or divide gene clusters to ensure they contain all co-expressed genes.</p>
+
+    <p>Thus, the computation of ARs is derived from gene context information, functional annotation, and estimates of gene ON and OFF states from the expression data. The estimation of gene ON and OFF states is pre-computed as a separate step (see “Estimation of gene ON/OFF states” bellow). Our AR inference process consists of six steps:</p>
+
+    <p><i>Step 1. Generate Initial Atomic Regulon Gene Sets</i></p>
+
+    <p>Compute a set of hypotheses in the form:</p>
+
+    <p>Genes G1 and G2 should be in the same atomic regulon</p>
+
+    <p>Initial clusters are proposed using two independent mechanisms: (i) gene clustering within putative operons; and (ii) membership of genes within SEED subsystems.</p> 
+
+    <p><i>Step 2. Process Gene Expression Data and Calculate Pairwise Expression Profile Similarities</i></p>
+
+    <p>Integrate all available gene expression data for the genome, load the normalized data, and compute Pearson correlation coefficients (PCCs) for all possible gene pairs. PCCs are computed to provide a quantitative assessment of how similar the expression profiles are for each gene pair.</p>
+
+    <p><i>Step 3. Expression Informed Splitting of Initial Atomic Regulon Gene Sets</i></p>
+
+    <p>Split operon and subsystem-based clusters using the criterion that genes in a set must have pairwise expression data profiles greater than a PCC of 0.7. This ensures that the initial clusters contain genes that all share a substantial level of co-expression.</p>
+
+    <p><i>Step 4. Restrict Gene Membership to One Atomic Regulon Gene Set</i></p>
+
+    <p>Merge the clusters built from operons and subsystems as, at this point, genes may be members of more than one cluster. We convert each cluster into a set of binary connections between all genes in the cluster. We then use the binary connections to form a single set of large clusters using transitive closure (e.g., if A is connected to B and B is connected to C, then A is connected to C). This leads to a condition in which any two genes that are connected are in the same cluster. This also ensures that no gene is a member of more than one cluster.</p>
+
+    <p><i>Step 5. Filter Atomic Regulon Gene Sets to Remove Low Correlation Genes</i></p>
+
+    <p>Split the merged clusters based on a distance computed between every pair of genes using the formula</p>
+
+    <p>Distance=  ((2-(PCC+1)))/2</p>
+
+    <p>This corrects for genes with a low PCC value that may have been placed in a common cluster. New sub-clusters are formed by taking the two closest genes (based on the above defined distance) within the initial merged cluster and adding other genes to the growing sub-cluster. At each point, the gene with the minimum average distance to genes in the growing sub-cluster is added to the sub-cluster, until no such gene exists with an average distance less than or equal to 0.25. If this simple accretion algorithm produces a single sub-cluster, no splitting is required. If not, the sub-clusters become the close to final AR gene sets.</p>
+
+    <p><i>Step 6. Generate Final Set of Atomic Regulons</i></p>
+
+    <p>Estimate the ON/OFF status of each cluster in any specific experimental sample by a simple voting algorithm using the ON/OFF estimates for the genes that make up the AR (see Estimation of gene ON/OFF states). We then merge these AR gene sets if they have identical ON/OFF expression profiles across all experimental conditions. It is important to note that the resulting set of atomic regulons is not comprehensive (i.e., not all genes are placed into an AR), but this set attempts to capture many of the operational groups of genes. This merged set becomes the final set of ARs.</p>
+
+    <p><b>Estimation of gene ON/OFF states</b></p>
+
+    <p>Our AR inference algorithm requires us to compute the correlation of expression for all genes across all available expression datasets. In this computation, we use expression values to assign all genes in all conditions to one of three possible states: ON, OFF, and UNKNOWN. These gene states are calculated for all genes in two steps.</p>
+
+    <p><i>Step 1. Initial Estimates of ON/OFF Calls Using an A Priori Identified Set of “Always ON” Genes</i></p>
+
+    <p>i) Determine the threshold for a gene to be considered ON based on the normalized expression of genes annotated with functions that are expected to be universally active. In total, we identified 80 functional roles from the SEED as universally active, largely from translation and transcription. We then consider the genes that implement these roles as ON.</p>
+
+    <p>ii) Empirically set initial ON/OFF calling thresholds for each experiment. The “ON” threshold for experiment <i>i</i>, called <i>N<sub>i<sub></i>, is set as the 10<sup>th</sup> percentile of observed gene expression values for “always ON” genes in experiment <i>i</i>. The “OFF” threshold for experiment <i>i</i>, called <i>F<sub>i</sub></i>, is set as the 80<sup>th</sup> percentile of observed gene expression values that are below <i>N<sub>i</sub></i> in experiment <i>i</i>.</p>
+
+    <p>iii) Update initial ON/OFF calling thresholds for each experiment by computing the difference, <i>D<sub>i</sub></i> = <i>N<sub>i</sub></i> - <i>F<sub>i</sub></i>, in thresholds for each experiment, then finding the 25<sup>th</sup> percentile of <i>D<sub>i</sub></i> across all experiments, <i>D<sub>25th</sub></i>. For any experiment <i>i</i> where <i>D<sub>i</sub></i> < <i>D<sub>25th</sub></i>, set <i>F<sub>i</sub></i> = <i>N<sub>i</sub></i> - <i>D<sub>25th</sub></i>. This ensures that the “ON” and “OFF” calling thresholds are never too close together for a particular experiment.</p>
+
+    <p>iv) Using the updated ON/OFF calling thresholds for each experiment (<i>N<sub>i</sub></i> and <i>F<sub>i</sub></i>), make initial ON/OFF calls for each gene in experiment <i>i</i> by classifying any gene expression value less than <i>F<sub>i</sub></i> as OFF, greater than <i>N<sub>i</sub></i> as ON, and between <i>F<sub>i</sub></i> and <i>N<sub>i</sub></i> as UNKNOWN.</p>
+
+    <p><i>Step 2. Updating Gene-Specific ON/OFF Calls Using Gene Sets to Ensure Maximal Consistency</i><p>
+
+    <p>i) Construct draft sets of genes that are expected to be co-expressed with a high degree of confidence. Sets are constructed from: (i) operons; and (ii) subsystems.</p>
+
+    <p>ii) Vote within each gene set to determine the ON/OFF status of the entire set in each experiment based on majority rule. For example, if a set of four genes has two genes initially called ON, one UNKNOWN, and one initially called OFF, we update the calls for all genes in the set to ON since that is the majority of the initial calls. Ties (e.g., two ON and two OFF or all UNKNOWN) are classified as UNKNOWN.</p>
+
+
+publications :
+    -
+        display-text: |
+            [1] Faria, Jose P, et al. "omputing and Applying Atomic Regulons to Understand Gene Expression and Regulation." Frontiers in Microbiology (submitted)
+        link: http://nar.oxfordjournals.org/content/33/17/5691.short
+    -
+        display-text: |
+            [2] Overbeek, Ross, et al. "The subsystems approach to genome annotation and its use in the project to annotate 1000 genomes." Nucleic acids research 33.17 (2005): 5691-5702.
+        link: http://nar.oxfordjournals.org/content/33/17/5691.short
+  
