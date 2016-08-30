@@ -215,7 +215,7 @@ sub compute_atomic_regulons
     close $oh;
     my $exp = "/kb/module/work/tmp/arwork/$expression_matrix_ref";
     File::Copy::Recursive::fcopy($exp, "$expDir/rma_normalized.tab") or die "copy failed $!";
-    atomic_regulons::GTO::write_seed_dir ($gto->[0],"$expDir/$genomeID");
+    atomic_regulons::GTO::write_seed_dir ($gto->[0],"$expDir/$genomeID", {map_CDS_to_peg =>1});
 
     File::Copy::Recursive::pathmk("$expDir/$genomeID/Subsystems");
     open(my $bh, ">$expDir/$genomeID/Subsystems/bindings") || die "Could not write subsystem bindings: $!";
